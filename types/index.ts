@@ -1,0 +1,86 @@
+// Core shared types used across the entire app
+
+export type Position = "GK" | "DEF" | "MID" | "FWD";
+
+export interface Player {
+  id: string;
+  name: string;
+  position: Position;
+  skill_rating: number; // 1–20, manually set, used for balanced team generation
+  has_paid: boolean;
+  amount_paid: number;
+  games_played: number;
+  games_won: number;
+  created_at: string;
+}
+
+// Used for the add/edit form — no id or created_at yet
+export type PlayerFormData = Omit<Player, "id" | "created_at">;
+
+export interface PlayerStats {
+  id: string;
+  player_id: string;
+  games_played: number;
+  // GK
+  saves?: number;
+  goals_conceded?: number;
+  clean_sheets?: number;
+  // DEF
+  tackles?: number;
+  interceptions?: number;
+  // MID
+  key_passes?: number;
+  // FWD / shared attacking
+  goals?: number;
+  assists?: number;
+  shots_on_target?: number;
+  recorded_at: string;
+}
+
+export interface AggregatedStats {
+  games_played: number;
+  goals: number;
+  assists: number;
+  saves?: number;
+  goals_conceded?: number;
+  clean_sheets?: number;
+  tackles?: number;
+  interceptions?: number;
+  key_passes?: number;
+  shots_on_target?: number;
+}
+
+export interface MoneyGoal {
+  id: string;
+  title: string;
+  target_amount: number;
+  created_at: string;
+}
+
+export interface PaymentWithPlayer extends Payment {
+  player_name: string | null;
+}
+
+export interface BudgetSummary {
+  total_collected: number;
+  total_expenses: number;
+  balance: number;
+}
+
+export type PaymentType = "add_money" | "remove_money";
+
+export interface Payment {
+  id: string;
+  player_id: string | null;
+  amount: number;
+  type: PaymentType;
+  description?: string;
+  paid_at: string;
+}
+
+export interface GoalAllocation {
+  id: string;
+  goal_id: string;
+  allocated_amount: number;
+  updated_at: string;
+}

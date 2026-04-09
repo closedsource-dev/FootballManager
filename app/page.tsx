@@ -1,65 +1,150 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { getPlayers } from "@/lib/players";
+import { getBudgetSummary } from "@/lib/payments";
+import { useCurrency } from "@/lib/currencyContext";
+import { getRank, getNextRank, RANKS } from "@/lib/ranks";
+import type { Player, BudgetSummary } from "@/types";
+
+export default function DashboardPage() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [summary, setSummary] = useState<BudgetSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [gamesUpdating, setGamesUpdating] = useState(false);
+  const [teamGames, setTeamGames] = useState(0);
+  const { fmt } = useCurrency();
+
+  useEffect(() => {
+    const saved = parseInt(localStorage.getItem("fm_team_games") ?? "0", 10);
+    setTeamGames(isNaN(saved) ? 0 : saved);
+    async function load() {
+      try {
+        const [p, s] = await Promise.all([getPlayers(), getBudgetSummary()]);
+        setPlayers(p);
+        setSummary(s);
+      } catch {
+        // fail silently on dashboard
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const totalGames = teamGames;
+  const rank = getRank(totalGames);
+  const nextRank = getNextRank(totalGames);
+  const progressToNext = nextRank
+    ? ((totalGames - rank.minGames) / (nextRank.minGames - rank.minGames)) * 100
+    : 100;
+
+  async function handleGamesChange(delta: number) {
+    if (players.length === 0 || gamesUpdating) return;
+    setGamesUpdating(true);
+    try {
+      const next = Math.max(0, teamGames + delta);
+      localStorage.setItem("fm_team_games", String(next));
+      setTeamGames(next);
+    } finally {
+      setGamesUpdating(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Dashboard</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">Welcome to Football Manager. Use the nav to get started.</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {/* Total Players */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Total Players</p>
+          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{loading ? "—" : players.length}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {players.length === 22 ? "Ready to generate teams" : `${Math.max(0, 22 - players.length)} more for full squad`}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Fund Balance */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Fund Balance</p>
+          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">
+            {loading || !summary ? "—" : fmt(summary.balance)}
+          </p>
+          {summary && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {fmt(summary.total_collected)} in · {fmt(summary.total_expenses)} out
+            </p>
+          )}
         </div>
-      </main>
+
+        {/* Games Played */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Games Played</p>
+          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{loading ? "—" : totalGames}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total across all players</p>
+          {!loading && (
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => handleGamesChange(-1)}
+                disabled={gamesUpdating || teamGames === 0}
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-lg font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-30 flex items-center justify-center"
+              >
+                −
+              </button>
+              <button
+                onClick={() => handleGamesChange(1)}
+                disabled={gamesUpdating}
+                className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-lg font-bold hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors disabled:opacity-30 flex items-center justify-center"
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Rank card */}
+      {!loading && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6">
+          <div className="flex items-center gap-6">
+            <div className="shrink-0">
+              <Image src={rank.image} alt={rank.name} width={120} height={132} className="object-contain drop-shadow-md" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className={`text-2xl font-bold ${rank.color}`}>{rank.name}</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">{totalGames} games played</span>
+              </div>
+              {nextRank ? (
+                <>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1.5">
+                    <div className="h-2.5 rounded-full bg-green-500 transition-all" style={{ width: `${Math.min(progressToNext, 100)}%` }} />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {nextRank.minGames - totalGames} more games to reach{" "}
+                    <span className={`font-semibold ${nextRank.color}`}>{nextRank.name}</span>
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 dark:text-gray-400">Maximum rank reached 🏆</p>
+              )}
+            </div>
+            <div className="hidden sm:flex flex-col gap-1 shrink-0">
+              {RANKS.map((r) => (
+                <div key={r.name} className="flex items-center gap-1.5">
+                  <Image src={r.image} alt={r.name} width={24} height={26} className="object-contain" />
+                  <span className={`text-xs font-medium ${r.name === rank.name ? r.color : "text-gray-300 dark:text-gray-600"}`}>
+                    {r.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
