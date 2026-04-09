@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getPlayers } from "@/lib/players";
 import { getBudgetSummary } from "@/lib/payments";
+import { getGameLogs } from "@/lib/games";
 import { useCurrency } from "@/lib/currencyContext";
 import { getRank, getNextRank, RANKS } from "@/lib/ranks";
 import type { Player, BudgetSummary } from "@/types";
@@ -12,18 +13,20 @@ export default function DashboardPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [gamesUpdating, setGamesUpdating] = useState(false);
   const [teamGames, setTeamGames] = useState(0);
   const { fmt } = useCurrency();
 
   useEffect(() => {
-    const saved = parseInt(localStorage.getItem("fm_team_games") ?? "0", 10);
-    setTeamGames(isNaN(saved) ? 0 : saved);
     async function load() {
       try {
-        const [p, s] = await Promise.all([getPlayers(), getBudgetSummary()]);
+        const [p, s, games] = await Promise.all([
+          getPlayers(),
+          getBudgetSummary(),
+          getGameLogs()
+        ]);
         setPlayers(p);
         setSummary(s);
+        setTeamGames(games.length);
       } catch {
         // fail silently on dashboard
       } finally {
@@ -39,18 +42,6 @@ export default function DashboardPage() {
   const progressToNext = nextRank
     ? ((totalGames - rank.minGames) / (nextRank.minGames - rank.minGames)) * 100
     : 100;
-
-  async function handleGamesChange(delta: number) {
-    if (players.length === 0 || gamesUpdating) return;
-    setGamesUpdating(true);
-    try {
-      const next = Math.max(0, teamGames + delta);
-      localStorage.setItem("fm_team_games", String(next));
-      setTeamGames(next);
-    } finally {
-      setGamesUpdating(false);
-    }
-  }
 
   return (
     <div>
@@ -84,25 +75,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
           <p className="text-sm text-gray-500 dark:text-gray-400">Games Played</p>
           <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{loading ? "—" : totalGames}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total across all players</p>
-          {!loading && (
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => handleGamesChange(-1)}
-                disabled={gamesUpdating || teamGames === 0}
-                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-lg font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-30 flex items-center justify-center"
-              >
-                −
-              </button>
-              <button
-                onClick={() => handleGamesChange(1)}
-                disabled={gamesUpdating}
-                className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-lg font-bold hover:bg-green-200 dark:hover:bg-green-900/60 transition-colors disabled:opacity-30 flex items-center justify-center"
-              >
-                +
-              </button>
-            </div>
-          )}
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total team games logged</p>
         </div>
       </div>
 
