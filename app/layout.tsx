@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import NavbarWrapper from "@/components/ui/NavbarWrapper";
+import AuthGuard from "@/components/AuthGuard";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { AuthProvider } from "@/lib/authContext";
@@ -21,8 +22,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <CurrencyProvider>
-              <NavbarWrapper />
-              <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+              <AuthGuard>
+                <NavbarWrapper />
+                <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
+              </AuthGuard>
             </CurrencyProvider>
           </AuthProvider>
         </ThemeProvider>
