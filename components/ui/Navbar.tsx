@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCurrency, CURRENCY_SYMBOLS, type Currency } from "@/lib/currencyContext";
 import { useTheme } from "@/lib/themeContext";
+import { useAuth } from "@/lib/authContext";
+import { useRouter } from "next/navigation";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -18,6 +20,13 @@ export default function Navbar() {
   const pathname = usePathname();
   const { currency, setCurrency } = useCurrency();
   const { dark, toggle } = useTheme();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/login");
+  }
 
   return (
     <nav className="bg-green-700 dark:bg-green-900 text-white px-6 py-4 flex items-center justify-between">
@@ -64,6 +73,16 @@ export default function Navbar() {
             </button>
           ))}
         </div>
+
+        {/* Sign out */}
+        {user && (
+          <button
+            onClick={handleSignOut}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-800 dark:bg-green-700 hover:bg-green-600 text-green-200 hover:text-white transition-colors"
+          >
+            Sign out
+          </button>
+        )}
       </div>
     </nav>
   );

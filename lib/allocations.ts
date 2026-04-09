@@ -39,7 +39,7 @@ export async function setAllocation(
   const { data, error } = await supabase
     .from("goal_allocations")
     .upsert(
-      { goal_id, allocated_amount: amount, updated_at: new Date().toISOString() },
+      { goal_id, allocated_amount: amount, updated_at: new Date().toISOString(), user_id: (await supabase.auth.getUser()).data.user?.id },
       { onConflict: "goal_id" }
     )
     .select()

@@ -10,10 +10,17 @@ export interface GameLog {
   played_at: string;
 }
 
+async function getUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return user.id;
+}
+
 export async function logGame(game: Omit<GameLog, "id" | "played_at">): Promise<GameLog> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("game_logs")
-    .insert(game)
+    .insert({ ...game, user_id })
     .select()
     .single();
   if (error) throw new Error(error.message);
