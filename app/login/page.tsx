@@ -4,7 +4,6 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +24,7 @@ export default function LoginPage() {
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        setMessage("Check your email to confirm your account, then log in.");
+        setMessage("Account created! You can now sign in.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");

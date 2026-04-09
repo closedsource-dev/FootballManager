@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/ui/Navbar";
+import NavbarWrapper from "@/components/ui/NavbarWrapper";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { ThemeProvider } from "@/lib/themeContext";
 import { AuthProvider } from "@/lib/authContext";
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider>
           <AuthProvider>
             <CurrencyProvider>
-              <Navbar />
+              <NavbarWrapper />
               <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
             </CurrencyProvider>
           </AuthProvider>
