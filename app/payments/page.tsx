@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PaymentWithPlayer, MoneyGoal, BudgetSummary, Payment, GoalAllocation } from "@/types";
+import type { Player, PaymentWithPlayer, MoneyGoal, BudgetSummary, Payment, GoalAllocation } from "@/types";
+import { getPlayers } from "@/lib/players";
 import { getPayments, logPayment, getBudgetSummary, createGoal, getGoals, deleteGoal } from "@/lib/payments";
 import { getAllocations, setAllocation, removeAllocation, getUnallocatedBalance } from "@/lib/allocations";
 import { useCurrency } from "@/lib/currencyContext";
@@ -13,6 +14,7 @@ import GoalForm from "@/components/payments/GoalForm";
 
 export default function PaymentsPage() {
   const [payments, setPayments] = useState<PaymentWithPlayer[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [goals, setGoals] = useState<MoneyGoal[]>([]);
   const [summary, setSummary] = useState<BudgetSummary>({ total_collected: 0, total_expenses: 0, balance: 0 });
   const [allocations, setAllocations] = useState<GoalAllocation[]>([]);
@@ -30,10 +32,10 @@ export default function PaymentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [pay, g, s, allocs] = await Promise.all([
-        getPayments(), getGoals(), getBudgetSummary(), getAllocations(),
+      const [pay, g, s, allocs, p] = await Promise.all([
+        getPayments(), getGoals(), getBudgetSummary(), getAllocations(), getPlayers(),
       ]);
-      setPayments(pay); setGoals(g); setSummary(s); setAllocations(allocs);
+      setPayments(pay); setGoals(g); setSummary(s); setAllocations(allocs); setPlayers(p);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -188,6 +190,7 @@ export default function PaymentsPage() {
       {showPaymentForm && (
         <PaymentForm
           balance={summary.balance}
+          players={players}
           onSubmit={handleLogPayment}
           onCancel={() => { setShowPaymentForm(false); setPaymentError(null); }}
           externalError={paymentError}
