@@ -38,9 +38,11 @@ export async function logPayment(payment: Omit<Payment, "id" | "paid_at">): Prom
 }
 
 export async function getPayments(): Promise<PaymentWithPlayer[]> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("payments")
     .select("*, players(name)")
+    .eq("user_id", user_id)
     .order("paid_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => ({
@@ -60,7 +62,11 @@ export async function deletePayment(id: string): Promise<void> {
 }
 
 export async function getBudgetSummary(): Promise<BudgetSummary> {
-  const { data, error } = await supabase.from("payments").select("type, amount");
+  const user_id = await getUserId();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("type, amount")
+    .eq("user_id", user_id);
   if (error) throw new Error(error.message);
   let total_collected = 0;
   let total_expenses = 0;
@@ -83,9 +89,11 @@ export async function createGoal(goal: Omit<MoneyGoal, "id" | "created_at">): Pr
 }
 
 export async function getGoals(): Promise<MoneyGoal[]> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("payment_goals")
     .select("*")
+    .eq("user_id", user_id)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as MoneyGoal[];

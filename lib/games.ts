@@ -28,9 +28,11 @@ export async function logGame(game: Omit<GameLog, "id" | "played_at">): Promise<
 }
 
 export async function getGameLogs(): Promise<GameLog[]> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("game_logs")
     .select("*")
+    .eq("user_id", user_id)
     .order("played_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as GameLog[];

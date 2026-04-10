@@ -8,9 +8,11 @@ async function getUserId(): Promise<string> {
 }
 
 export async function getPlayers(): Promise<Player[]> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("players")
     .select("*")
+    .eq("user_id", user_id)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data as Player[];

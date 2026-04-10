@@ -6,6 +6,8 @@ import { useCurrency, CURRENCY_SYMBOLS, type Currency } from "@/lib/currencyCont
 import { useTheme } from "@/lib/themeContext";
 import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { resetAllUserData } from "@/lib/resetData";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -22,10 +24,25 @@ export default function Navbar() {
   const { dark, toggle } = useTheme();
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   async function handleSignOut() {
     await signOut();
     router.push("/login");
+  }
+
+  async function handleResetData() {
+    setResetting(true);
+    try {
+      await resetAllUserData();
+      setShowResetConfirm(false);
+      // Force a full page reload to clear all cached data
+      window.location.reload();
+    } catch (error) {
+      alert("Failed to reset data: " + (error as Error).message);
+      setResetting(false);
+    }
   }
 
   return (
@@ -74,6 +91,17 @@ export default function Navbar() {
           ))}
         </div>
 
+        {/* Reset data */}
+        {user && (
+          <button
+            onClick={() => setShowResetConfirm(true)}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md bg-red-800 dark:bg-red-700 hover:bg-red-600 text-red-200 hover:text-white transition-colors"
+            title="Reset all data"
+          >
+            Reset
+          </button>
+        )}
+
         {/* Sign out */}
         {user && (
           <button
@@ -84,6 +112,34 @@ export default function Navbar() {
           </button>
         )}
       </div>
+
+      {/* Reset confirmation modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Reset All Data?</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              This will permanently delete all your players, games, payments, and goals. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resetting}
+                className="flex-1 border dark:border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleResetData}
+                disabled={resetting}
+                className="flex-1 bg-red-600 text-white rounded-lg px-4 py-2 text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {resetting ? "Resetting..." : "Reset All Data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

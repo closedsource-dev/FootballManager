@@ -17,39 +17,6 @@ export interface Player {
 // Used for the add/edit form — no id or created_at yet
 export type PlayerFormData = Omit<Player, "id" | "created_at">;
 
-export interface PlayerStats {
-  id: string;
-  player_id: string;
-  games_played: number;
-  // GK
-  saves?: number;
-  goals_conceded?: number;
-  clean_sheets?: number;
-  // DEF
-  tackles?: number;
-  interceptions?: number;
-  // MID
-  key_passes?: number;
-  // FWD / shared attacking
-  goals?: number;
-  assists?: number;
-  shots_on_target?: number;
-  recorded_at: string;
-}
-
-export interface AggregatedStats {
-  games_played: number;
-  goals: number;
-  assists: number;
-  saves?: number;
-  goals_conceded?: number;
-  clean_sheets?: number;
-  tackles?: number;
-  interceptions?: number;
-  key_passes?: number;
-  shots_on_target?: number;
-}
-
 export interface MoneyGoal {
   id: string;
   title: string;

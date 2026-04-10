@@ -1,10 +1,18 @@
 import { supabase } from "./supabase";
 import type { GoalAllocation } from "../types";
 
+async function getUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return user.id;
+}
+
 export async function getAllocations(): Promise<GoalAllocation[]> {
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("goal_allocations")
     .select("*")
+    .eq("user_id", user_id)
     .order("updated_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as GoalAllocation[];
@@ -36,10 +44,11 @@ export async function setAllocation(
     );
   }
 
+  const user_id = await getUserId();
   const { data, error } = await supabase
     .from("goal_allocations")
     .upsert(
-      { goal_id, allocated_amount: amount, updated_at: new Date().toISOString(), user_id: (await supabase.auth.getUser()).data.user?.id },
+      { goal_id, allocated_amount: amount, updated_at: new Date().toISOString(), user_id },
       { onConflict: "goal_id" }
     )
     .select()
