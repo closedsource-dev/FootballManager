@@ -1,15 +1,52 @@
 -- Sharing and Permissions System Migration
 -- This adds username support and workspace sharing capabilities
 
--- 1. Add username column to profiles table (if it doesn't exist)
-DO $$ 
+-- 1. Create profiles table if it doesn't exist
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  username TEXT UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+
+-- Enable RLS on profiles
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies for profiles
+CREATE POLICY IF NOT EXISTS "Users can view all profiles"
+  ON profiles FOR SELECT
+  USING (true);
+
+CREATE POLICY IF NOT EXISTS "Users can update own profile"
+  ON profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- Function to automatically create profile on user signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                 WHERE table_name = 'profiles' AND column_name = 'username') THEN
-    ALTER TABLE profiles ADD COLUMN username TEXT UNIQUE;
-    CREATE INDEX idx_profiles_username ON profiles(username);
-  END IF;
-END $$;
+  INSERT INTO profiles (id, email)
+  VALUES (NEW.id, NEW.email);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to create profile on signup
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Backfill existing users into profiles table
+INSERT INTO profiles (id, email)
+SELECT id, email FROM auth.users
+WHERE id NOT IN (SELECT id FROM profiles)
+ON CONFLICT (id) DO NOTHING;
 
 -- 2. Create workspace_shares table for managing shared access
 CREATE TABLE IF NOT EXISTS workspace_shares (
