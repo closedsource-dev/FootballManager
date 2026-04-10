@@ -1,22 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import type { Player, Payment, PaymentType } from "@/types";
+import type { Player, Payment, PaymentType, Category } from "@/types";
 import { useCurrency } from "@/lib/currencyContext";
 
 interface PaymentFormProps {
   balance: number;
   players: Player[];
-  onSubmit: (p: Omit<Payment, "id" | "paid_at">) => Promise<void>;
+  categories: Category[];
+  onSubmit: (p: Omit<Payment, "id">) => Promise<void>;
   onCancel: () => void;
   externalError?: string | null;
 }
 
-export default function PaymentForm({ balance, players, onSubmit, onCancel, externalError }: PaymentFormProps) {
+export default function PaymentForm({ balance, players, categories, onSubmit, onCancel, externalError }: PaymentFormProps) {
   const { symbol, fmt } = useCurrency();
   const [type, setType] = useState<PaymentType>("add_money");
   const [amount, setAmount] = useState("");
   const [playerId, setPlayerId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [paymentDate, setPaymentDate] = useState(() => {
     const today = new Date();
@@ -44,12 +46,12 @@ export default function PaymentForm({ balance, players, onSubmit, onCancel, exte
     if (!validate()) return;
     setSubmitting(true);
     try {
-      // Convert the date to ISO string with time
       const paymentDateISO = new Date(paymentDate + 'T12:00:00').toISOString();
       await onSubmit({ 
         type, 
         amount: Number(amount), 
-        player_id: playerId || null, 
+        player_id: playerId || null,
+        category_id: categoryId || null,
         description: description.trim(),
         paid_at: paymentDateISO
       });
@@ -87,9 +89,23 @@ export default function PaymentForm({ balance, players, onSubmit, onCancel, exte
             </label>
             <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600">
-              <option value="">— General fund —</option>
+              <option value="">— None —</option>
               {players.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Optional category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Category <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600">
+              <option value="">— General fund —</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>

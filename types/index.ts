@@ -17,15 +17,16 @@ export interface Player {
 // Used for the add/edit form — no id or created_at yet
 export type PlayerFormData = Omit<Player, "id" | "created_at">;
 
-export interface MoneyGoal {
+export interface Category {
   id: string;
-  title: string;
-  target_amount: number;
+  name: string;
+  amount: number;
   created_at: string;
 }
 
 export interface PaymentWithPlayer extends Payment {
   player_name: string | null;
+  category_name: string | null;
 }
 
 export interface BudgetSummary {
@@ -39,15 +40,9 @@ export type PaymentType = "add_money" | "remove_money";
 export interface Payment {
   id: string;
   player_id: string | null;
+  category_id: string | null;
   amount: number;
   type: PaymentType;
   description?: string;
   paid_at: string;
-}
-
-export interface GoalAllocation {
-  id: string;
-  goal_id: string;
-  allocated_amount: number;
-  updated_at: string;
 }

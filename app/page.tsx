@@ -3,38 +3,66 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getPlayers } from "@/lib/players";
-import { getBudgetSummary } from "@/lib/payments";
+import { getBudgetSummary, logPayment } from "@/lib/payments";
 import { getGameLogs } from "@/lib/games";
+import { getCategories } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
 import { getRank, getNextRank, RANKS } from "@/lib/ranks";
-import type { Player, BudgetSummary } from "@/types";
+import type { Player, BudgetSummary, Category } from "@/types";
 
 export default function DashboardPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamGames, setTeamGames] = useState(0);
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
+  const [categoryAmounts, setCategoryAmounts] = useState<Record<string, string>>({});
   const { fmt } = useCurrency();
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [p, s, games] = await Promise.all([
-          getPlayers(),
-          getBudgetSummary(),
-          getGameLogs()
-        ]);
-        setPlayers(p);
-        setSummary(s);
-        setTeamGames(games.length);
-      } catch {
-        // fail silently on dashboard
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
   }, []);
+
+  async function load() {
+    try {
+      const [p, s, games, c] = await Promise.all([
+        getPlayers(),
+        getBudgetSummary(),
+        getGameLogs(),
+        getCategories()
+      ]);
+      setPlayers(p);
+      setSummary(s);
+      setTeamGames(games.length);
+      setCategories(c);
+    } catch {
+      // fail silently on dashboard
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAddToCategory(categoryId: string) {
+    const amount = Number(categoryAmounts[categoryId]);
+    if (!amount || amount <= 0) return;
+    
+    setAddingToCategory(categoryId);
+    try {
+      await logPayment({
+        type: "add_money",
+        amount,
+        category_id: categoryId,
+        player_id: null,
+        description: "Added from dashboard",
+        paid_at: new Date().toISOString(),
+      });
+      setCategoryAmounts((prev) => ({ ...prev, [categoryId]: "" }));
+      await load();
+    } finally {
+      setAddingToCategory(null);
+    }
+  }
 
   const totalGames = teamGames;
   const rank = getRank(totalGames);
@@ -81,7 +109,7 @@ export default function DashboardPage() {
 
       {/* Rank card */}
       {!loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-6">
             <div className="shrink-0">
               <Image src={rank.image} alt={rank.name} width={120} height={132} className="object-contain drop-shadow-md" />
@@ -115,6 +143,41 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Categories */}
+      {!loading && categories.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Fund Categories</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((category) => (
+              <div key={category.id} className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-5">
+                <div className="mb-3">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{category.name}</p>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">{fmt(category.amount)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={categoryAmounts[category.id] || ""}
+                    onChange={(e) => setCategoryAmounts((prev) => ({ ...prev, [category.id]: e.target.value }))}
+                    placeholder="Amount"
+                    className="flex-1 border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+                  />
+                  <button
+                    onClick={() => handleAddToCategory(category.id)}
+                    disabled={addingToCategory === category.id || !categoryAmounts[category.id]}
+                    className="bg-green-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
+                  >
+                    {addingToCategory === category.id ? "..." : "+ Add"}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

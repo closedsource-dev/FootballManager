@@ -42,7 +42,7 @@ export default function PaymentHistory({ payments }: PaymentHistoryProps) {
               {typeLabel[payment.type]}
             </span>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {payment.player_name ?? "General fund"} · {formatDate(payment.paid_at)}
+              {payment.player_name || payment.category_name || "General fund"} · {formatDate(payment.paid_at)}
               {payment.description ? ` · ${payment.description}` : ""}
             </p>
           </div>

@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
-import type { Payment, PaymentWithPlayer, BudgetSummary, MoneyGoal } from "../types";
+import type { Payment, PaymentWithPlayer, BudgetSummary } from "../types";
+import { addToCategory, removeFromCategory } from "./categories";
 
 async function getUserId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -17,6 +18,7 @@ export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: stri
     .single();
   if (error) throw new Error(error.message);
 
+  // Update player balance if player_id is provided
   if (payment.player_id) {
     const { data: player, error: fetchErr } = await supabase
       .from("players")
@@ -35,6 +37,15 @@ export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: stri
     if (updateErr) throw new Error(updateErr.message);
   }
 
+  // Update category balance if category_id is provided
+  if (payment.category_id) {
+    if (payment.type === "add_money") {
+      await addToCategory(payment.category_id, payment.amount);
+    } else {
+      await removeFromCategory(payment.category_id, payment.amount);
+    }
+  }
+
   return data as Payment;
 }
 
@@ -42,18 +53,20 @@ export async function getPayments(): Promise<PaymentWithPlayer[]> {
   const user_id = await getUserId();
   const { data, error } = await supabase
     .from("payments")
-    .select("*, players(name)")
+    .select("*, players(name), categories(name)")
     .eq("user_id", user_id)
     .order("paid_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => ({
     id: row.id,
     player_id: row.player_id,
+    category_id: row.category_id,
     amount: row.amount,
     type: row.type,
     description: row.description,
     paid_at: row.paid_at,
     player_name: row.players?.name ?? null,
+    category_name: row.categories?.name ?? null,
   }));
 }
 
@@ -76,31 +89,4 @@ export async function getBudgetSummary(): Promise<BudgetSummary> {
     else if (row.type === "remove_money") total_expenses += Number(row.amount);
   }
   return { total_collected, total_expenses, balance: total_collected - total_expenses };
-}
-
-export async function createGoal(goal: Omit<MoneyGoal, "id" | "created_at">): Promise<MoneyGoal> {
-  const user_id = await getUserId();
-  const { data, error } = await supabase
-    .from("payment_goals")
-    .insert({ ...goal, user_id })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as MoneyGoal;
-}
-
-export async function getGoals(): Promise<MoneyGoal[]> {
-  const user_id = await getUserId();
-  const { data, error } = await supabase
-    .from("payment_goals")
-    .select("*")
-    .eq("user_id", user_id)
-    .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []) as MoneyGoal[];
-}
-
-export async function deleteGoal(id: string): Promise<void> {
-  const { error } = await supabase.from("payment_goals").delete().eq("id", id);
-  if (error) throw new Error(error.message);
 }

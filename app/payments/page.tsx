@@ -1,29 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Player, PaymentWithPlayer, MoneyGoal, BudgetSummary, Payment, GoalAllocation } from "@/types";
+import type { Player, PaymentWithPlayer, Category, BudgetSummary, Payment } from "@/types";
 import { getPlayers } from "@/lib/players";
-import { getPayments, logPayment, getBudgetSummary, createGoal, getGoals, deleteGoal } from "@/lib/payments";
-import { getAllocations, setAllocation, removeAllocation, getUnallocatedBalance } from "@/lib/allocations";
+import { getPayments, logPayment, getBudgetSummary } from "@/lib/payments";
+import { getCategories, createCategory, deleteCategory } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
 import BudgetSummaryCard from "@/components/payments/BudgetSummary";
 import PaymentForm from "@/components/payments/PaymentForm";
 import PaymentHistory from "@/components/payments/PaymentHistory";
-import PaymentGoal from "@/components/payments/PaymentGoal";
-import GoalForm from "@/components/payments/GoalForm";
+import CategoryCard from "@/components/payments/CategoryCard";
+import CategoryForm from "@/components/payments/CategoryForm";
+import PlayerTransactionsTable from "@/components/payments/PlayerTransactionsTable";
 
 export default function PaymentsPage() {
+  const [tab, setTab] = useState<"general" | "players">("general");
   const [payments, setPayments] = useState<PaymentWithPlayer[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [goals, setGoals] = useState<MoneyGoal[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [summary, setSummary] = useState<BudgetSummary>({ total_collected: 0, total_expenses: 0, balance: 0 });
-  const [allocations, setAllocations] = useState<GoalAllocation[]>([]);
-  const [allocationErrors, setAllocationErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const { fmt } = useCurrency();
 
   useEffect(() => { loadAll(); }, []);
@@ -32,10 +32,10 @@ export default function PaymentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [pay, g, s, allocs, p] = await Promise.all([
-        getPayments(), getGoals(), getBudgetSummary(), getAllocations(), getPlayers(),
+      const [pay, c, s, p] = await Promise.all([
+        getPayments(), getCategories(), getBudgetSummary(), getPlayers(),
       ]);
-      setPayments(pay); setGoals(g); setSummary(s); setAllocations(allocs); setPlayers(p);
+      setPayments(pay); setCategories(c); setSummary(s); setPlayers(p);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -43,90 +43,58 @@ export default function PaymentsPage() {
     }
   }
 
-  function buildTargets(): Record<string, number> {
-    return Object.fromEntries(goals.map((g) => [g.id, g.target_amount]));
-  }
-
-  async function handleLogPayment(p: Omit<Payment, "id" | "paid_at">) {
+  async function handleLogPayment(p: Omit<Payment, "id">) {
     setPaymentError(null);
-    if (p.type === "remove_money") {
-      const targets = buildTargets();
-      const unallocated = getUnallocatedBalance(summary.balance, allocations, targets);
-      if (p.amount > summary.balance) {
-        setPaymentError(`Cannot remove ${fmt(p.amount)} — balance is only ${fmt(summary.balance)}`);
-        return;
-      }
-      if (p.amount > unallocated) {
-        const excess = p.amount - unallocated;
-        setPaymentError(
-          `${fmt(excess)} of that amount is allocated to goals. Reset ${fmt(excess)} from your goals first, then try again.`
-        );
-        return;
-      }
-    }
     try {
       await logPayment(p);
-      const [pay, s, allocs] = await Promise.all([
-        getPayments(), getBudgetSummary(), getAllocations(),
-      ]);
-      setPayments(pay); setSummary(s); setAllocations(allocs);
+      await loadAll();
       setShowPaymentForm(false);
     } catch (err: unknown) {
       setPaymentError(err instanceof Error ? err.message : "Failed to log payment");
     }
   }
 
-  async function handleCreateGoal(goal: Omit<MoneyGoal, "id" | "created_at">) {
+  async function handleCreateCategory(category: Omit<Category, "id" | "created_at">) {
     try {
-      await createGoal(goal);
-      setGoals(await getGoals());
-      setShowGoalForm(false);
+      await createCategory(category);
+      setCategories(await getCategories());
+      setShowCategoryForm(false);
     } catch (err: unknown) {
       throw err;
     }
   }
 
-  async function handleReset(goalId: string) {
-    await removeAllocation(goalId).catch(() => {});
-    const alloc = allocations.find((a) => a.goal_id === goalId);
-    if (!alloc) await deleteGoal(goalId);
-    const [g, allocs] = await Promise.all([getGoals(), getAllocations()]);
-    setGoals(g); setAllocations(allocs);
+  async function handleAddToCategory(categoryId: string, amount: number) {
+    await logPayment({
+      type: "add_money",
+      amount,
+      category_id: categoryId,
+      player_id: null,
+      description: "Added to category",
+      paid_at: new Date().toISOString(),
+    });
+    await loadAll();
   }
 
-  async function handleComplete(goalId: string) {
-    const goal = goals.find((g) => g.id === goalId);
-    if (!goal) return;
-    await logPayment({ type: "remove_money", amount: goal.target_amount, player_id: null });
-    await removeAllocation(goalId).catch(() => {});
-    await deleteGoal(goalId);
-    const [g, allocs, pay, s] = await Promise.all([
-      getGoals(), getAllocations(), getPayments(), getBudgetSummary(),
-    ]);
-    setGoals(g); setAllocations(allocs); setPayments(pay); setSummary(s);
+  async function handleRemoveFromCategory(categoryId: string, amount: number) {
+    await logPayment({
+      type: "remove_money",
+      amount,
+      category_id: categoryId,
+      player_id: null,
+      description: "Removed from category",
+      paid_at: new Date().toISOString(),
+    });
+    await loadAll();
   }
 
-  async function handleAllocate(goalId: string, amount: number) {
-    setAllocationErrors((prev) => ({ ...prev, [goalId]: "" }));
-    const goal = goals.find((g) => g.id === goalId);
-    if (!goal) return;
-    try {
-      await setAllocation(goalId, amount, goal.target_amount, summary.balance);
-      setAllocations(await getAllocations());
-    } catch (err: unknown) {
-      setAllocationErrors((prev) => ({
-        ...prev,
-        [goalId]: err instanceof Error ? err.message : "Failed to allocate",
-      }));
-    }
+  async function handleDeleteCategory(categoryId: string) {
+    await deleteCategory(categoryId);
+    await loadAll();
   }
 
-  const targets = buildTargets();
-  const unallocatedBalance = getUnallocatedBalance(summary.balance, allocations, targets);
-
-  function getAllocatedAmount(goalId: string): number {
-    return allocations.find((a) => a.goal_id === goalId)?.allocated_amount ?? 0;
-  }
+  const totalInCategories = categories.reduce((sum, c) => sum + Number(c.amount), 0);
+  const unallocatedBalance = summary.balance - totalInCategories;
 
   return (
     <div>
@@ -143,37 +111,51 @@ export default function PaymentsPage() {
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-6 w-fit">
+        {(["general", "players"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === t
+                ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            {t === "general" ? "General" : "Player Transactions"}
+          </button>
+        ))}
+      </div>
+
       {loading && <p className="text-gray-400 text-sm">Loading…</p>}
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      {!loading && (
+      {!loading && tab === "general" && (
         <div className="space-y-6">
           <BudgetSummaryCard summary={summary} unallocatedBalance={unallocatedBalance} />
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Money Goals</h2>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Categories</h2>
               <button
-                onClick={() => setShowGoalForm(true)}
+                onClick={() => setShowCategoryForm(true)}
                 className="text-sm border dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                + Add Goal
+                + Add Category
               </button>
             </div>
-            {goals.length === 0 ? (
-              <p className="text-gray-400 text-sm">No goals set yet.</p>
+            {categories.length === 0 ? (
+              <p className="text-gray-400 dark:text-gray-500 text-sm">No categories yet. Create one to organize your funds.</p>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {goals.map((goal) => (
-                  <PaymentGoal
-                    key={goal.id}
-                    goal={goal}
-                    allocatedAmount={getAllocatedAmount(goal.id)}
-                    unallocatedBalance={unallocatedBalance}
-                    onAllocate={handleAllocate}
-                    onReset={handleReset}
-                    onComplete={handleComplete}
-                    allocationError={allocationErrors[goal.id]}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categories.map((category) => (
+                  <CategoryCard
+                    key={category.id}
+                    category={category}
+                    onAddMoney={handleAddToCategory}
+                    onRemoveMoney={handleRemoveFromCategory}
+                    onDelete={handleDeleteCategory}
                   />
                 ))}
               </div>
@@ -187,20 +169,28 @@ export default function PaymentsPage() {
         </div>
       )}
 
+      {!loading && tab === "players" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Player Balances</h2>
+          <PlayerTransactionsTable players={players} />
+        </div>
+      )}
+
       {showPaymentForm && (
         <PaymentForm
           balance={summary.balance}
           players={players}
+          categories={categories}
           onSubmit={handleLogPayment}
           onCancel={() => { setShowPaymentForm(false); setPaymentError(null); }}
           externalError={paymentError}
         />
       )}
 
-      {showGoalForm && (
-        <GoalForm
-          onSubmit={handleCreateGoal}
-          onCancel={() => setShowGoalForm(false)}
+      {showCategoryForm && (
+        <CategoryForm
+          onSubmit={handleCreateCategory}
+          onCancel={() => setShowCategoryForm(false)}
         />
       )}
     </div>
