@@ -5,11 +5,13 @@ import PlayerTable from "@/components/players/PlayerTable";
 import PlayerForm from "@/components/players/PlayerForm";
 import { getPlayers, addPlayer, updatePlayer, deletePlayer } from "@/lib/players";
 import { logPayment } from "@/lib/payments";
+import { getCategories } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
-import type { Player, PlayerFormData } from "@/types";
+import type { Player, PlayerFormData, Category } from "@/types";
 
 export default function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalPlayer, setModalPlayer] = useState<Player | undefined | null>(null);
@@ -21,6 +23,7 @@ export default function PlayersPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payDesc, setPayDesc] = useState("");
   const [payType, setPayType] = useState<"add" | "subtract">("add");
+  const [payCategory, setPayCategory] = useState<string>("");
   const [payDate, setPayDate] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -36,7 +39,9 @@ export default function PlayersPage() {
     setLoading(true);
     setError(null);
     try {
-      setPlayers(await getPlayers());
+      const [p, c] = await Promise.all([getPlayers(), getCategories()]);
+      setPlayers(p);
+      setCategories(c);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load players");
     } finally {
@@ -78,6 +83,10 @@ export default function PlayersPage() {
       setPayError("Enter a valid amount greater than 0");
       return;
     }
+    if (payType === "add" && !payCategory) {
+      setPayError("Please select a category when adding money");
+      return;
+    }
     if (payType === "subtract" && amt > payTarget.amount_paid) {
       setPayError(`Cannot exceed current balance of ${fmt(payTarget.amount_paid)}`);
       return;
@@ -90,6 +99,7 @@ export default function PlayersPage() {
         type: payType === "add" ? "add_money" : "remove_money",
         amount: amt,
         player_id: payTarget.id,
+        category_id: payCategory || null,
         description: payDesc.trim(),
         paid_at: payDateISO,
       });
@@ -98,6 +108,7 @@ export default function PlayersPage() {
       setPayTarget(null);
       setPayAmount("");
       setPayDesc("");
+      setPayCategory("");
       const today = new Date();
       setPayDate(today.toISOString().split('T')[0]);
     } catch (err: unknown) {
@@ -134,7 +145,8 @@ export default function PlayersPage() {
             setPayTarget(player); 
             setPayAmount(""); 
             setPayDesc(""); 
-            setPayType("add"); 
+            setPayType("add");
+            setPayCategory("");
             const today = new Date();
             setPayDate(today.toISOString().split('T')[0]);
             setPayError(""); 
@@ -190,6 +202,25 @@ export default function PlayersPage() {
               placeholder="Description (optional)"
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600 mb-2"
             />
+            <div className="mb-2">
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Category {payType === "add" && <span className="text-red-500">*</span>}
+                {payType === "subtract" && <span className="text-gray-400">(optional)</span>}
+              </label>
+              <select
+                value={payCategory}
+                onChange={(e) => setPayCategory(e.target.value)}
+                required={payType === "add"}
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">{payType === "add" ? "— Select a category —" : "No category"}</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="mb-2">
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Payment Date</label>
               <input 

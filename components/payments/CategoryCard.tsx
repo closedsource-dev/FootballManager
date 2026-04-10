@@ -1,22 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import type { Category } from "@/types";
+import type { Category, Player, PaymentWithPlayer } from "@/types";
 import { useCurrency } from "@/lib/currencyContext";
 
 interface CategoryCardProps {
   category: Category;
-  onAddMoney: (categoryId: string, amount: number) => Promise<void>;
-  onRemoveMoney: (categoryId: string, amount: number) => Promise<void>;
+  players: Player[];
+  payments: PaymentWithPlayer[];
+  onAddMoney: (categoryId: string, amount: number, playerId: string | null, date: string) => Promise<void>;
   onDelete: (categoryId: string) => Promise<void>;
+  onViewDetails: (category: Category) => void;
 }
 
-export default function CategoryCard({ category, onAddMoney, onRemoveMoney, onDelete }: CategoryCardProps) {
+export default function CategoryCard({ category, players, payments, onAddMoney, onDelete, onViewDetails }: CategoryCardProps) {
   const { fmt } = useCurrency();
   const [amount, setAmount] = useState("");
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showDelete, setShowDelete] = useState(false);
+
+  // Calculate general fund vs player contributions
+  const categoryPayments = payments.filter(p => p.category_id === category.id && p.type === "add_money");
+  const generalAmount = categoryPayments
+    .filter(p => !p.player_id)
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const playerAmount = categoryPayments
+    .filter(p => p.player_id)
+    .reduce((sum, p) => sum + Number(p.amount), 0);
 
   async function handleAdd() {
     const amt = Number(amount);
@@ -27,32 +43,13 @@ export default function CategoryCard({ category, onAddMoney, onRemoveMoney, onDe
     setError("");
     setLoading(true);
     try {
-      await onAddMoney(category.id, amt);
+      await onAddMoney(category.id, amt, selectedPlayer || null, selectedDate);
       setAmount("");
+      setSelectedPlayer("");
+      const today = new Date();
+      setSelectedDate(today.toISOString().split('T')[0]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add money");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRemove() {
-    const amt = Number(amount);
-    if (!amount || isNaN(amt) || amt <= 0) {
-      setError("Enter a valid amount");
-      return;
-    }
-    if (amt > category.amount) {
-      setError(`Cannot exceed category balance of ${fmt(category.amount)}`);
-      return;
-    }
-    setError("");
-    setLoading(true);
-    try {
-      await onRemoveMoney(category.id, amt);
-      setAmount("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to remove money");
     } finally {
       setLoading(false);
     }
@@ -71,9 +68,20 @@ export default function CategoryCard({ category, onAddMoney, onRemoveMoney, onDe
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-5">
       <div className="flex items-start justify-between mb-3">
-        <div>
+        <div className="flex-1">
           <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100">{category.name}</h3>
           <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">{fmt(category.amount)}</p>
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <span>General: {fmt(generalAmount)}</span>
+            <span>•</span>
+            <span>Players: {fmt(playerAmount)}</span>
+          </div>
+          <button
+            onClick={() => onViewDetails(category)}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1"
+          >
+            View player contributions →
+          </button>
         </div>
         <button
           onClick={() => setShowDelete(true)}
@@ -86,7 +94,7 @@ export default function CategoryCard({ category, onAddMoney, onRemoveMoney, onDe
 
       {!showDelete ? (
         <>
-          <div className="flex gap-2 mb-2">
+          <div className="space-y-2 mb-2">
             <input
               type="number"
               min="0.01"
@@ -94,25 +102,35 @@ export default function CategoryCard({ category, onAddMoney, onRemoveMoney, onDe
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Amount"
-              className="flex-1 border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            <select
+              value={selectedPlayer}
+              onChange={(e) => setSelectedPlayer(e.target.value)}
+              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            >
+              <option value="">No player (general fund)</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAdd}
-              disabled={loading}
-              className="flex-1 bg-green-700 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
-            >
-              + Add
-            </button>
-            <button
-              onClick={handleRemove}
-              disabled={loading || category.amount <= 0}
-              className="flex-1 border border-red-200 dark:border-red-800 text-red-500 rounded-lg px-3 py-2 text-sm hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
-            >
-              − Remove
-            </button>
-          </div>
+          <button
+            onClick={handleAdd}
+            disabled={loading}
+            className="w-full bg-green-700 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
+          >
+            + Add Money
+          </button>
           {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
         </>
       ) : (

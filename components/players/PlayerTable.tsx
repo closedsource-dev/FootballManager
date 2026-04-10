@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import type { Player } from "@/types";
-import { useCurrency } from "@/lib/currencyContext";
 
 interface Props {
   players: Player[];
@@ -45,7 +44,6 @@ function sortPlayers(players: Player[], key: SortKey): Player[] {
 
 export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
-  const { fmt } = useCurrency();
 
   if (players.length === 0) {
     return <p className="text-gray-400 dark:text-gray-500 text-sm mt-8 text-center">No players yet. Add one to get started.</p>;
@@ -79,7 +77,6 @@ export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props)
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Position</th>
               <th className="px-4 py-3 text-left">Skill</th>
-              <th className="px-4 py-3 text-left">Balance</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -104,7 +101,6 @@ export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props)
                       <span className="text-gray-600 dark:text-gray-300">{player.skill_rating}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 font-medium text-green-700 dark:text-green-400">{fmt(player.amount_paid)}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button
                       onClick={() => onPay(player)}

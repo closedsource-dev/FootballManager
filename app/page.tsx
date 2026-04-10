@@ -16,8 +16,19 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamGames, setTeamGames] = useState(0);
+  const [teamGamesYTD, setTeamGamesYTD] = useState(0);
+  const [gamesTimeframe, setGamesTimeframe] = useState<"ytd" | "all">("all");
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
-  const [categoryAmounts, setCategoryAmounts] = useState<Record<string, string>>({});
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [categoryAmount, setCategoryAmount] = useState("");
+  const [categoryPlayer, setCategoryPlayer] = useState("");
+  const [categoryDate, setCategoryDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [categoryDescription, setCategoryDescription] = useState("");
+  const [categoryError, setCategoryError] = useState("");
   const { fmt } = useCurrency();
 
   useEffect(() => {
@@ -35,6 +46,15 @@ export default function DashboardPage() {
       setPlayers(p);
       setSummary(s);
       setTeamGames(games.length);
+      
+      // Calculate YTD games (games from this year)
+      const currentYear = new Date().getFullYear();
+      const ytdGames = games.filter(game => {
+        const gameYear = new Date(game.played_at).getFullYear();
+        return gameYear === currentYear;
+      });
+      setTeamGamesYTD(ytdGames.length);
+      
       setCategories(c);
     } catch {
       // fail silently on dashboard
@@ -44,27 +64,49 @@ export default function DashboardPage() {
   }
 
   async function handleAddToCategory(categoryId: string) {
-    const amount = Number(categoryAmounts[categoryId]);
-    if (!amount || amount <= 0) return;
+    const amount = Number(categoryAmount);
+    if (!categoryAmount || amount <= 0) {
+      setCategoryError("Enter a valid amount");
+      return;
+    }
     
+    setCategoryError("");
     setAddingToCategory(categoryId);
     try {
+      const payDateISO = new Date(categoryDate + 'T12:00:00').toISOString();
       await logPayment({
         type: "add_money",
         amount,
         category_id: categoryId,
-        player_id: null,
-        description: "Added from dashboard",
-        paid_at: new Date().toISOString(),
+        player_id: categoryPlayer || null,
+        description: categoryDescription.trim() || (categoryPlayer ? "Player contribution from dashboard" : "Allocated from dashboard"),
+        paid_at: payDateISO,
       });
-      setCategoryAmounts((prev) => ({ ...prev, [categoryId]: "" }));
+      setCategoryAmount("");
+      setCategoryPlayer("");
+      setCategoryDescription("");
+      const today = new Date();
+      setCategoryDate(today.toISOString().split('T')[0]);
+      setShowCategoryModal(false);
+      setSelectedCategoryId("");
       await load();
     } finally {
       setAddingToCategory(null);
     }
   }
 
-  const totalGames = teamGames;
+  function openCategoryModal(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    setCategoryAmount("");
+    setCategoryPlayer("");
+    setCategoryDescription("");
+    const today = new Date();
+    setCategoryDate(today.toISOString().split('T')[0]);
+    setCategoryError("");
+    setShowCategoryModal(true);
+  }
+
+  const totalGames = gamesTimeframe === "ytd" ? teamGamesYTD : teamGames;
   const rank = getRank(totalGames);
   const nextRank = getNextRank(totalGames);
   const progressToNext = nextRank
@@ -101,9 +143,37 @@ export default function DashboardPage() {
 
         {/* Games Played */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Games Played</p>
-          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{loading ? "—" : totalGames}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Total team games logged</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Games Played</p>
+            <div className="flex rounded-lg border dark:border-gray-600 overflow-hidden">
+              <button
+                onClick={() => setGamesTimeframe("ytd")}
+                className={`text-xs px-2 py-0.5 transition-colors ${
+                  gamesTimeframe === "ytd"
+                    ? "bg-green-700 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                YTD
+              </button>
+              <button
+                onClick={() => setGamesTimeframe("all")}
+                className={`text-xs px-2 py-0.5 transition-colors ${
+                  gamesTimeframe === "all"
+                    ? "bg-green-700 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                All
+              </button>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">
+            {loading ? "—" : gamesTimeframe === "ytd" ? teamGamesYTD : teamGames}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {gamesTimeframe === "ytd" ? "Games this year" : "Total team games logged"}
+          </p>
         </div>
       </div>
 
@@ -158,26 +228,86 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">{category.name}</p>
                   <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">{fmt(category.amount)}</p>
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={categoryAmounts[category.id] || ""}
-                    onChange={(e) => setCategoryAmounts((prev) => ({ ...prev, [category.id]: e.target.value }))}
-                    placeholder="Amount"
-                    className="flex-1 border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
-                  />
-                  <button
-                    onClick={() => handleAddToCategory(category.id)}
-                    disabled={addingToCategory === category.id || !categoryAmounts[category.id]}
-                    className="bg-green-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
-                  >
-                    {addingToCategory === category.id ? "..." : "+ Add"}
-                  </button>
-                </div>
+                <button
+                  onClick={() => openCategoryModal(category.id)}
+                  disabled={addingToCategory === category.id}
+                  className="w-full bg-green-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
+                >
+                  {addingToCategory === category.id ? "..." : "+ Add"}
+                </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Category contribution modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">
+              Add to {categories.find(c => c.id === selectedCategoryId)?.name}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              Current: {fmt(categories.find(c => c.id === selectedCategoryId)?.amount || 0)}
+            </p>
+            <div className="space-y-3">
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={categoryAmount}
+                onChange={(e) => setCategoryAmount(e.target.value)}
+                placeholder="Amount"
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+              <select
+                value={categoryPlayer}
+                onChange={(e) => setCategoryPlayer(e.target.value)}
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              >
+                <option value="">No player (general fund)</option>
+                {players.map((player) => (
+                  <option key={player.id} value={player.id}>
+                    {player.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={categoryDate}
+                onChange={(e) => setCategoryDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+              <input
+                type="text"
+                value={categoryDescription}
+                onChange={(e) => setCategoryDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+              {categoryError && <p className="text-red-500 text-xs">{categoryError}</p>}
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setSelectedCategoryId("");
+                  setCategoryError("");
+                }}
+                className="flex-1 border dark:border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleAddToCategory(selectedCategoryId)}
+                disabled={!!addingToCategory}
+                className="flex-1 bg-green-700 text-white rounded-lg px-4 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
+              >
+                {addingToCategory ? "Adding..." : "Add"}
+              </button>
+            </div>
           </div>
         </div>
       )}

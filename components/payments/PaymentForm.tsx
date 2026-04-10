@@ -33,6 +33,10 @@ export default function PaymentForm({ balance, players, categories, onSubmit, on
       setAmountError("Amount must be greater than 0");
       return false;
     }
+    if (type === "add_money" && !categoryId) {
+      setAmountError("Please select a category when adding money");
+      return false;
+    }
     if (type === "remove_money" && amt > balance) {
       setAmountError(`Cannot exceed fund balance of ${fmt(balance)}`);
       return false;
@@ -96,14 +100,18 @@ export default function PaymentForm({ balance, players, categories, onSubmit, on
             </select>
           </div>
 
-          {/* Optional category */}
+          {/* Required category when adding money */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Category <span className="text-gray-400 font-normal">(optional)</span>
+              Category {type === "add_money" && <span className="text-red-500">*</span>}
+              {type === "remove_money" && <span className="text-gray-400 font-normal">(optional)</span>}
             </label>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
+            <select 
+              value={categoryId} 
+              onChange={(e) => setCategoryId(e.target.value)}
+              required={type === "add_money"}
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600">
-              <option value="">— General fund —</option>
+              <option value="">{type === "add_money" ? "— Select a category —" : "— General fund —"}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

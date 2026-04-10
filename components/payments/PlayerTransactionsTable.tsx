@@ -119,7 +119,6 @@ export default function PlayerTransactionsTable({ players }: PlayerTransactionsT
             <tr>
               <th className="px-4 py-3 text-left">Player</th>
               <th className="px-4 py-3 text-left">Position</th>
-              <th className="px-4 py-3 text-left">Total Balance</th>
               <th className="px-4 py-3 text-left">
                 {startDate || endDate ? 'Amount in Range' : 'Total Paid'}
               </th>
@@ -128,7 +127,7 @@ export default function PlayerTransactionsTable({ players }: PlayerTransactionsT
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
+                <td colSpan={3} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500 text-sm">
                   Loading...
                 </td>
               </tr>
@@ -141,7 +140,6 @@ export default function PlayerTransactionsTable({ players }: PlayerTransactionsT
                       {player.position}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-medium text-green-700 dark:text-green-400">{fmt(player.amount_paid)}</td>
                   <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{fmt(player.amountInRange)}</td>
                 </tr>
               ))

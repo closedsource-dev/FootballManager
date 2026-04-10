@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Player, PaymentWithPlayer, Category, BudgetSummary, Payment } from "@/types";
 import { getPlayers } from "@/lib/players";
-import { getPayments, logPayment, getBudgetSummary } from "@/lib/payments";
+import { getPayments, logPayment, getBudgetSummary, deletePayment } from "@/lib/payments";
 import { getCategories, createCategory, deleteCategory } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
 import BudgetSummaryCard from "@/components/payments/BudgetSummary";
@@ -11,6 +11,7 @@ import PaymentForm from "@/components/payments/PaymentForm";
 import PaymentHistory from "@/components/payments/PaymentHistory";
 import CategoryCard from "@/components/payments/CategoryCard";
 import CategoryForm from "@/components/payments/CategoryForm";
+import CategoryDetails from "@/components/payments/CategoryDetails";
 import PlayerTransactionsTable from "@/components/payments/PlayerTransactionsTable";
 
 export default function PaymentsPage() {
@@ -24,7 +25,7 @@ export default function PaymentsPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const { fmt } = useCurrency();
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -64,37 +65,95 @@ export default function PaymentsPage() {
     }
   }
 
-  async function handleAddToCategory(categoryId: string, amount: number) {
+  async function handleAddToCategory(categoryId: string, amount: number, playerId: string | null, date: string) {
+    // When a player contributes to a category:
+    // - Use "add_money" type so player's balance increases
+    // - But the trigger will still add to category amount (we need to update the trigger logic)
+    const payDateISO = new Date(date + 'T12:00:00').toISOString();
     await logPayment({
       type: "add_money",
       amount,
       category_id: categoryId,
-      player_id: null,
-      description: "Added to category",
-      paid_at: new Date().toISOString(),
-    });
-    await loadAll();
-  }
-
-  async function handleRemoveFromCategory(categoryId: string, amount: number) {
-    await logPayment({
-      type: "remove_money",
-      amount,
-      category_id: categoryId,
-      player_id: null,
-      description: "Removed from category",
-      paid_at: new Date().toISOString(),
+      player_id: playerId,
+      description: playerId ? "Player contribution to category" : "Allocated to category",
+      paid_at: payDateISO,
     });
     await loadAll();
   }
 
   async function handleDeleteCategory(categoryId: string) {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    // Get all payments for this category
+    const categoryPayments = payments.filter(p => p.category_id === categoryId);
+    
+    // Calculate the net effect on balance and player balances
+    let netBalanceChange = 0;
+    const playerBalanceChanges: Record<string, number> = {};
+
+    for (const payment of categoryPayments) {
+      const amount = Number(payment.amount);
+      
+      // Track balance changes
+      if (payment.type === "add_money") {
+        netBalanceChange -= amount; // Reverse the addition
+      } else if (payment.type === "remove_money") {
+        netBalanceChange += amount; // Reverse the removal
+      }
+
+      // Track player balance changes
+      if (payment.player_id) {
+        if (!playerBalanceChanges[payment.player_id]) {
+          playerBalanceChanges[payment.player_id] = 0;
+        }
+        if (payment.type === "add_money") {
+          playerBalanceChanges[payment.player_id] -= amount;
+        } else if (payment.type === "remove_money") {
+          playerBalanceChanges[payment.player_id] += amount;
+        }
+      }
+    }
+
+    // Create a single payment to adjust the balance
+    if (netBalanceChange !== 0) {
+      await logPayment({
+        type: netBalanceChange > 0 ? "add_money" : "remove_money",
+        amount: Math.abs(netBalanceChange),
+        category_id: null,
+        player_id: null,
+        description: `Adjustment from deleting category: ${category.name}`,
+        paid_at: new Date().toISOString(),
+      });
+    }
+
+    // Update player balances
+    for (const [playerId, change] of Object.entries(playerBalanceChanges)) {
+      if (change !== 0) {
+        const player = players.find(p => p.id === playerId);
+        if (player) {
+          const newBalance = Math.max(0, player.amount_paid + change);
+          await logPayment({
+            type: change > 0 ? "add_money" : "remove_money",
+            amount: Math.abs(change),
+            category_id: null,
+            player_id: playerId,
+            description: `Adjustment from deleting category: ${category.name}`,
+            paid_at: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // Delete all payments associated with this category
+    for (const payment of categoryPayments) {
+      await deletePayment(payment.id);
+    }
+
+    // Delete the category
     await deleteCategory(categoryId);
     await loadAll();
   }
-
-  const totalInCategories = categories.reduce((sum, c) => sum + Number(c.amount), 0);
-  const unallocatedBalance = summary.balance - totalInCategories;
 
   return (
     <div>
@@ -133,7 +192,7 @@ export default function PaymentsPage() {
 
       {!loading && tab === "general" && (
         <div className="space-y-6">
-          <BudgetSummaryCard summary={summary} unallocatedBalance={unallocatedBalance} />
+          <BudgetSummaryCard summary={summary} />
 
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -153,9 +212,11 @@ export default function PaymentsPage() {
                   <CategoryCard
                     key={category.id}
                     category={category}
+                    players={players}
+                    payments={payments}
                     onAddMoney={handleAddToCategory}
-                    onRemoveMoney={handleRemoveFromCategory}
                     onDelete={handleDeleteCategory}
+                    onViewDetails={setSelectedCategory}
                   />
                 ))}
               </div>
@@ -191,6 +252,13 @@ export default function PaymentsPage() {
         <CategoryForm
           onSubmit={handleCreateCategory}
           onCancel={() => setShowCategoryForm(false)}
+        />
+      )}
+
+      {selectedCategory && (
+        <CategoryDetails
+          category={selectedCategory}
+          onClose={() => setSelectedCategory(null)}
         />
       )}
     </div>

@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
 import type { Payment, PaymentWithPlayer, BudgetSummary } from "../types";
-import { addToCategory, removeFromCategory } from "./categories";
 
 async function getUserId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -37,14 +36,7 @@ export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: stri
     if (updateErr) throw new Error(updateErr.message);
   }
 
-  // Update category balance if category_id is provided
-  if (payment.category_id) {
-    if (payment.type === "add_money") {
-      await addToCategory(payment.category_id, payment.amount);
-    } else {
-      await removeFromCategory(payment.category_id, payment.amount);
-    }
-  }
+  // Category balance is updated automatically by database trigger
 
   return data as Payment;
 }

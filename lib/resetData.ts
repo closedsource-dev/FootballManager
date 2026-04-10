@@ -24,21 +24,43 @@ export async function resetAllUserData(): Promise<void> {
     .eq("user_id", user_id);
   if (gamesError) throw new Error(gamesError.message);
 
-  // 3. Delete payments
+  // 3. Delete categories BEFORE payments to avoid trigger conflicts
+  // Set category amounts to 0 first to prevent the trigger from creating payments
+  const { data: userCategories } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("user_id", user_id);
+  
+  if (userCategories) {
+    for (const cat of userCategories) {
+      await supabase
+        .from("categories")
+        .update({ amount: 0 })
+        .eq("id", cat.id);
+    }
+  }
+
+  const { error: categoriesError } = await supabase
+    .from("categories")
+    .delete()
+    .eq("user_id", user_id);
+  if (categoriesError) throw new Error(categoriesError.message);
+
+  // 4. Delete payments
   const { error: paymentsError } = await supabase
     .from("payments")
     .delete()
     .eq("user_id", user_id);
   if (paymentsError) throw new Error(paymentsError.message);
 
-  // 4. Delete payment goals
+  // 5. Delete payment goals
   const { error: goalsError } = await supabase
     .from("payment_goals")
     .delete()
     .eq("user_id", user_id);
   if (goalsError) throw new Error(goalsError.message);
 
-  // 5. Delete players (this will cascade to player_stats if it exists)
+  // 6. Delete players (this will cascade to player_stats if it exists)
   const { error: playersError } = await supabase
     .from("players")
     .delete()

@@ -26,6 +26,8 @@ export default function Navbar() {
   const router = useRouter();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetError, setResetError] = useState("");
 
   async function handleSignOut() {
     await signOut();
@@ -33,14 +35,35 @@ export default function Navbar() {
   }
 
   async function handleResetData() {
+    if (!resetPassword) {
+      setResetError("Please enter your password");
+      return;
+    }
+
     setResetting(true);
+    setResetError("");
+    
     try {
+      // Verify password by attempting to sign in
+      const { data, error } = await import("@/lib/supabase").then(m => m.supabase.auth.signInWithPassword({
+        email: user?.email || "",
+        password: resetPassword,
+      }));
+
+      if (error) {
+        setResetError("Incorrect password");
+        setResetting(false);
+        return;
+      }
+
+      // Password is correct, proceed with reset
       await resetAllUserData();
       setShowResetConfirm(false);
+      setResetPassword("");
       // Force a full page reload to clear all cached data
       window.location.reload();
     } catch (error) {
-      alert("Failed to reset data: " + (error as Error).message);
+      setResetError("Failed to reset data: " + (error as Error).message);
       setResetting(false);
     }
   }
@@ -119,11 +142,29 @@ export default function Navbar() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Reset All Data?</h2>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              This will permanently delete all your players, games, payments, and goals. This action cannot be undone.
+              This will permanently delete all your players, games, payments, categories, and goals. This action cannot be undone.
             </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Enter your password to confirm
+              </label>
+              <input
+                type="password"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-600"
+                disabled={resetting}
+              />
+              {resetError && <p className="text-red-500 text-xs mt-2">{resetError}</p>}
+            </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowResetConfirm(false)}
+                onClick={() => {
+                  setShowResetConfirm(false);
+                  setResetPassword("");
+                  setResetError("");
+                }}
                 disabled={resetting}
                 className="flex-1 border dark:border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
               >
