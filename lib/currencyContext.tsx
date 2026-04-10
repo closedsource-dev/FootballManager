@@ -18,14 +18,14 @@ interface CurrencyContextValue {
 }
 
 const CurrencyContext = createContext<CurrencyContextValue>({
-  currency: "GBP",
-  symbol: "£",
+  currency: "USD",
+  symbol: "$",
   setCurrency: () => {},
-  fmt: (n) => `£${n.toFixed(2)}`,
+  fmt: (n) => `$${n.toFixed(2)}`,
 });
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>("GBP");
+  const [currency, setCurrencyState] = useState<Currency>("USD");
 
   useEffect(() => {
     const saved = localStorage.getItem("fm_currency") as Currency | null;
