@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,42 @@ export default function LoginPage() {
         if (error) throw error;
         window.location.href = "/";
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
+        // Validate username for signup
+        if (!username.trim()) {
+          throw new Error("Username is required");
+        }
+        if (username.length < 3) {
+          throw new Error("Username must be at least 3 characters");
+        }
+        if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+          throw new Error("Username can only contain letters, numbers, hyphens, and underscores");
+        }
+
+        // Check if username is already taken
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("username", username)
+          .single();
+
+        if (existingProfile) {
+          throw new Error("Username already taken");
+        }
+
+        // Create account
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) throw signUpError;
+
+        // Update profile with username (the trigger creates the profile automatically)
+        if (authData.user) {
+          const { error: profileError } = await supabase
+            .from("profiles")
+            .update({ username })
+            .eq("id", authData.user.id);
+
+          if (profileError) throw profileError;
+        }
+
         setMessage("Account created! Confirm your email and sign in.");
       }
     } catch (err: unknown) {
@@ -45,6 +80,22 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "signup" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="your_username"
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                3+ characters, letters, numbers, hyphens, and underscores only
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
             <input
