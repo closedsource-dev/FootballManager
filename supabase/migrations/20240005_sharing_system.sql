@@ -229,6 +229,7 @@ BEGIN
 END $$;
 
 -- 4. Function to search users by username
+DROP FUNCTION IF EXISTS search_users_by_username(TEXT);
 CREATE OR REPLACE FUNCTION search_users_by_username(search_term TEXT)
 RETURNS TABLE (
   id UUID,
@@ -253,6 +254,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION search_users_by_username(TEXT) TO authenticated;
 
 -- 5. Function to get workspace shares for current user
+DROP FUNCTION IF EXISTS get_my_workspace_shares();
 CREATE OR REPLACE FUNCTION get_my_workspace_shares()
 RETURNS TABLE (
   id UUID,
@@ -279,6 +281,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 GRANT EXECUTE ON FUNCTION get_my_workspace_shares() TO authenticated;
 
 -- 6. Function to get workspaces shared with me
+DROP FUNCTION IF EXISTS get_shared_with_me();
 CREATE OR REPLACE FUNCTION get_shared_with_me()
 RETURNS TABLE (
   id UUID,
