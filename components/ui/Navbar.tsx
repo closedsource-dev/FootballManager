@@ -70,7 +70,8 @@ export default function Navbar() {
       // Profiles table might not exist yet
       // Check if it's a "relation does not exist" error
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("Error checking username:", errorMessage);
+      const errorDetails = err instanceof Error ? err : JSON.stringify(err);
+      console.error("Error checking username:", errorDetails);
       
       if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
         // Table doesn't exist, hide sharing features
