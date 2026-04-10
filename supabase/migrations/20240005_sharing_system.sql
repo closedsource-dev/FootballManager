@@ -18,11 +18,13 @@ CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policies for profiles
-CREATE POLICY IF NOT EXISTS "Users can view all profiles"
+DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
+CREATE POLICY "Users can view all profiles"
   ON profiles FOR SELECT
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Users can update own profile"
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
