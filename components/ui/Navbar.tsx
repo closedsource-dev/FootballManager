@@ -48,9 +48,13 @@ export default function Navbar() {
       if (profile && !profile.username) {
         setShowUsernameSetup(true);
         setHasUsername(false);
+      } else if (profile && profile.username) {
+        setHasUsername(true);
       }
     } catch (err) {
+      // Profiles table might not exist yet, fail silently
       console.error("Failed to check username:", err);
+      setHasUsername(false);
     }
   }
 

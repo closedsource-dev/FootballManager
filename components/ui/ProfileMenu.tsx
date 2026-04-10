@@ -35,6 +35,7 @@ export default function ProfileMenu({ onSignOut }: ProfileMenuProps) {
       const data = await getCurrentUserProfile();
       setProfile(data);
     } catch (err) {
+      // Profiles table might not exist yet, fail silently
       console.error("Failed to load profile:", err);
     }
   }
@@ -66,7 +67,17 @@ export default function ProfileMenu({ onSignOut }: ProfileMenuProps) {
     }
   }
 
-  if (!profile) return null;
+  if (!profile) {
+    // Fallback to basic sign out button if profile can't be loaded
+    return (
+      <button
+        onClick={onSignOut}
+        className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-800 dark:bg-green-700 hover:bg-green-600 text-green-200 hover:text-white transition-colors"
+      >
+        Sign out
+      </button>
+    );
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>

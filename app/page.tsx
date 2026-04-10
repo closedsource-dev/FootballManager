@@ -44,15 +44,21 @@ export default function DashboardPage() {
 
   async function load() {
     try {
-      const [p, s, games, c, profile] = await Promise.all([
+      const [p, s, games, c] = await Promise.all([
         getPlayers(),
         getBudgetSummary(),
         getGameLogs(),
-        getCategories(),
-        getCurrentUserProfile()
+        getCategories()
       ]);
       
-      setUsername(profile?.username || null);
+      // Try to load profile, but don't fail if it doesn't work
+      try {
+        const profile = await getCurrentUserProfile();
+        setUsername(profile?.username || null);
+      } catch {
+        // Profile table might not exist yet
+        setUsername(null);
+      }
       setPlayers(p);
       setSummary(s);
       setTeamGames(games.length);
