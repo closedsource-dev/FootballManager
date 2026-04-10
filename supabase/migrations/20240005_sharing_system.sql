@@ -71,6 +71,7 @@ ALTER TABLE workspace_shares ENABLE ROW LEVEL SECURITY;
 
 -- Policies for workspace_shares
 -- Users can view shares they own or are part of
+DROP POLICY IF EXISTS "Users can view their shares" ON workspace_shares;
 CREATE POLICY "Users can view their shares"
   ON workspace_shares FOR SELECT
   USING (
@@ -79,16 +80,19 @@ CREATE POLICY "Users can view their shares"
   );
 
 -- Only owners can create shares
+DROP POLICY IF EXISTS "Owners can create shares" ON workspace_shares;
 CREATE POLICY "Owners can create shares"
   ON workspace_shares FOR INSERT
   WITH CHECK (auth.uid() = owner_id);
 
 -- Only owners can update shares
+DROP POLICY IF EXISTS "Owners can update shares" ON workspace_shares;
 CREATE POLICY "Owners can update shares"
   ON workspace_shares FOR UPDATE
   USING (auth.uid() = owner_id);
 
 -- Only owners can delete shares
+DROP POLICY IF EXISTS "Owners can delete shares" ON workspace_shares;
 CREATE POLICY "Owners can delete shares"
   ON workspace_shares FOR DELETE
   USING (auth.uid() = owner_id);
