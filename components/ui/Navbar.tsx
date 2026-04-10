@@ -38,28 +38,40 @@ export default function Navbar() {
   const [hasUsername, setHasUsername] = useState(true);
 
   useEffect(() => {
-    checkUsername();
+    if (user) {
+      checkUsername();
+    }
   }, [user]);
 
   async function checkUsername() {
     if (!user) return;
+    
+    console.log("Checking username for user:", user.id);
+    
     try {
       const profile = await getCurrentUserProfile();
+      console.log("Profile loaded:", profile);
+      
       if (profile && !profile.username) {
         // User has profile but no username - prompt them
+        console.log("No username found, showing setup modal");
         setShowUsernameSetup(true);
         setHasUsername(false);
       } else if (profile && profile.username) {
         // User has username
+        console.log("Username found:", profile.username);
         setHasUsername(true);
       } else {
         // No profile at all
+        console.log("No profile found");
         setHasUsername(false);
       }
     } catch (err) {
       // Profiles table might not exist yet
       // Check if it's a "relation does not exist" error
       const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error("Error checking username:", errorMessage);
+      
       if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
         // Table doesn't exist, hide sharing features
         setHasUsername(false);
@@ -67,7 +79,6 @@ export default function Navbar() {
         // Other error, assume user might have username
         setHasUsername(true);
       }
-      console.error("Failed to check username:", err);
     }
   }
 
