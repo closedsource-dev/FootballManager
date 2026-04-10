@@ -136,6 +136,9 @@ DROP POLICY IF EXISTS "Users can view own players" ON players;
 DROP POLICY IF EXISTS "Users can insert own players" ON players;
 DROP POLICY IF EXISTS "Users can update own players" ON players;
 DROP POLICY IF EXISTS "Users can delete own players" ON players;
+DROP POLICY IF EXISTS "Users can view accessible players" ON players;
+DROP POLICY IF EXISTS "Editors can update players" ON players;
+DROP POLICY IF EXISTS "Editors can delete players" ON players;
 
 CREATE POLICY "Users can view accessible players"
   ON players FOR SELECT
@@ -158,6 +161,10 @@ DROP POLICY IF EXISTS "Users can view own payments" ON payments;
 DROP POLICY IF EXISTS "Users can insert own payments" ON payments;
 DROP POLICY IF EXISTS "Users can update own payments" ON payments;
 DROP POLICY IF EXISTS "Users can delete own payments" ON payments;
+DROP POLICY IF EXISTS "Users can view accessible payments" ON payments;
+DROP POLICY IF EXISTS "Editors can insert payments" ON payments;
+DROP POLICY IF EXISTS "Editors can update payments" ON payments;
+DROP POLICY IF EXISTS "Editors can delete payments" ON payments;
 
 CREATE POLICY "Users can view accessible payments"
   ON payments FOR SELECT
@@ -180,6 +187,10 @@ DROP POLICY IF EXISTS "Users can view own categories" ON categories;
 DROP POLICY IF EXISTS "Users can insert own categories" ON categories;
 DROP POLICY IF EXISTS "Users can update own categories" ON categories;
 DROP POLICY IF EXISTS "Users can delete own categories" ON categories;
+DROP POLICY IF EXISTS "Users can view accessible categories" ON categories;
+DROP POLICY IF EXISTS "Editors can insert categories" ON categories;
+DROP POLICY IF EXISTS "Editors can update categories" ON categories;
+DROP POLICY IF EXISTS "Editors can delete categories" ON categories;
 
 CREATE POLICY "Users can view accessible categories"
   ON categories FOR SELECT
@@ -205,6 +216,10 @@ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "Users can insert own games" ON games';
     EXECUTE 'DROP POLICY IF EXISTS "Users can update own games" ON games';
     EXECUTE 'DROP POLICY IF EXISTS "Users can delete own games" ON games';
+    EXECUTE 'DROP POLICY IF EXISTS "Users can view accessible games" ON games';
+    EXECUTE 'DROP POLICY IF EXISTS "Editors can insert games" ON games';
+    EXECUTE 'DROP POLICY IF EXISTS "Editors can update games" ON games';
+    EXECUTE 'DROP POLICY IF EXISTS "Editors can delete games" ON games';
     
     EXECUTE 'CREATE POLICY "Users can view accessible games" ON games FOR SELECT USING (has_workspace_access(user_id, ''viewer''))';
     EXECUTE 'CREATE POLICY "Editors can insert games" ON games FOR INSERT WITH CHECK (has_workspace_access(user_id, ''editor''))';
