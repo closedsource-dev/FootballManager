@@ -148,11 +148,21 @@ export default function ShareModal({ onClose }: ShareModalProps) {
                       key={user.id}
                       className="flex items-center justify-between p-3 border dark:border-gray-600 rounded-lg"
                     >
-                      <div>
+                      <div className="flex items-center gap-3">
+                        {user.avatar_url ? (
+                          <img
+                            src={user.avatar_url}
+                            alt={user.username || "User"}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold">
+                            {user.username?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                           {user.username || "No username"}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -196,11 +206,21 @@ export default function ShareModal({ onClose }: ShareModalProps) {
                       key={share.id}
                       className="flex items-center justify-between p-4 border dark:border-gray-600 rounded-lg"
                     >
-                      <div>
+                      <div className="flex items-center gap-3">
+                        {share.shared_with_avatar_url ? (
+                          <img
+                            src={share.shared_with_avatar_url}
+                            alt={share.shared_with_username || "User"}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400 font-semibold">
+                            {share.shared_with_username?.[0]?.toUpperCase() || "?"}
+                          </div>
+                        )}
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                           {share.shared_with_username || "No username"}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{share.shared_with_email}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <select

@@ -63,20 +63,22 @@ export interface UserProfile {
   id: string;
   username: string | null;
   email: string;
+  avatar_url: string | null;
 }
 
 export interface ShareWithUser {
   id: string;
   shared_with_username: string;
-  shared_with_email: string;
+  shared_with_avatar_url: string | null;
   role: ShareRole;
   created_at: string;
 }
 
 export interface SharedWithMe {
   id: string;
+  owner_id: string;
   owner_username: string;
-  owner_email: string;
+  owner_avatar_url: string | null;
   role: ShareRole;
   created_at: string;
 }

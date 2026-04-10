@@ -80,6 +80,37 @@ export async function updateUsername(username: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function uploadAvatar(file: File): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${user.id}.${fileExt}`;
+  const filePath = `avatars/${fileName}`;
+
+  // Upload file
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(filePath, file, { upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  // Get public URL
+  const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+  // Update profile
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: data.publicUrl })
+    .eq("id", user.id);
+
+  if (updateError) throw updateError;
+
+  return data.publicUrl;
+}
+
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
   const {
     data: { user },
@@ -88,7 +119,7 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, email")
+    .select("id, username, email, avatar_url")
     .eq("id", user.id)
     .single();
 

@@ -11,6 +11,8 @@ import { resetAllUserData } from "@/lib/resetData";
 import { getCurrentUserProfile } from "@/lib/sharing";
 import ShareModal from "./ShareModal";
 import UsernameSetup from "./UsernameSetup";
+import SharedWithMeDropdown from "./SharedWithMeDropdown";
+import ProfileMenu from "./ProfileMenu";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -127,6 +129,11 @@ export default function Navbar() {
           </button>
         )}
 
+        {/* Shared with me dropdown */}
+        {user && hasUsername && (
+          <SharedWithMeDropdown onSelectWorkspace={(ownerId) => console.log("Switch to workspace:", ownerId)} />
+        )}
+
         {/* Dark mode toggle */}
         <button
           onClick={toggle}
@@ -164,15 +171,8 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* Sign out */}
-        {user && (
-          <button
-            onClick={handleSignOut}
-            className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-800 dark:bg-green-700 hover:bg-green-600 text-green-200 hover:text-white transition-colors"
-          >
-            Sign out
-          </button>
-        )}
+        {/* Profile menu */}
+        {user && hasUsername && <ProfileMenu onSignOut={handleSignOut} />}
       </div>
 
       {/* Reset confirmation modal */}

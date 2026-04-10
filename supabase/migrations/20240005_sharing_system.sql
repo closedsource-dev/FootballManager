@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   username TEXT UNIQUE,
+  avatar_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -213,17 +214,18 @@ CREATE OR REPLACE FUNCTION search_users_by_username(search_term TEXT)
 RETURNS TABLE (
   id UUID,
   username TEXT,
-  email TEXT
+  avatar_url TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
   SELECT 
     p.id,
     p.username,
-    p.email
+    p.avatar_url
   FROM profiles p
   WHERE p.username ILIKE '%' || search_term || '%'
     AND p.id != auth.uid()
+    AND p.username IS NOT NULL
   LIMIT 10;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -236,7 +238,7 @@ CREATE OR REPLACE FUNCTION get_my_workspace_shares()
 RETURNS TABLE (
   id UUID,
   shared_with_username TEXT,
-  shared_with_email TEXT,
+  shared_with_avatar_url TEXT,
   role TEXT,
   created_at TIMESTAMPTZ
 ) AS $$
@@ -245,7 +247,7 @@ BEGIN
   SELECT 
     ws.id,
     p.username,
-    p.email,
+    p.avatar_url,
     ws.role,
     ws.created_at
   FROM workspace_shares ws
@@ -261,8 +263,9 @@ GRANT EXECUTE ON FUNCTION get_my_workspace_shares() TO authenticated;
 CREATE OR REPLACE FUNCTION get_shared_with_me()
 RETURNS TABLE (
   id UUID,
+  owner_id UUID,
   owner_username TEXT,
-  owner_email TEXT,
+  owner_avatar_url TEXT,
   role TEXT,
   created_at TIMESTAMPTZ
 ) AS $$
@@ -270,8 +273,9 @@ BEGIN
   RETURN QUERY
   SELECT 
     ws.id,
+    ws.owner_id,
     p.username,
-    p.email,
+    p.avatar_url,
     ws.role,
     ws.created_at
   FROM workspace_shares ws
