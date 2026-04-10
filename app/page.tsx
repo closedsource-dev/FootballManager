@@ -6,6 +6,7 @@ import { getPlayers } from "@/lib/players";
 import { getBudgetSummary, logPayment } from "@/lib/payments";
 import { getGameLogs } from "@/lib/games";
 import { getCategories } from "@/lib/categories";
+import { getCurrentUserProfile } from "@/lib/sharing";
 import { useCurrency } from "@/lib/currencyContext";
 import { getRank, getNextRank, RANKS } from "@/lib/ranks";
 import type { Player, BudgetSummary, Category } from "@/types";
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [summary, setSummary] = useState<BudgetSummary | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [teamGames, setTeamGames] = useState(0);
   const [teamGamesYTD, setTeamGamesYTD] = useState(0);
@@ -42,12 +44,15 @@ export default function DashboardPage() {
 
   async function load() {
     try {
-      const [p, s, games, c] = await Promise.all([
+      const [p, s, games, c, profile] = await Promise.all([
         getPlayers(),
         getBudgetSummary(),
         getGameLogs(),
-        getCategories()
+        getCategories(),
+        getCurrentUserProfile()
       ]);
+      
+      setUsername(profile?.username || null);
       setPlayers(p);
       setSummary(s);
       setTeamGames(games.length);
@@ -155,7 +160,9 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+        {username ? `${username}'s Dashboard` : "Dashboard"}
+      </h1>
       <p className="text-gray-500 dark:text-gray-400 mb-8">Welcome to Football Manager. Use the nav to get started.</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
