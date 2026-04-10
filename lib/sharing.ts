@@ -119,10 +119,10 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, email, avatar_url")
+    .select("id, username, email")
     .eq("id", user.id)
     .single();
 
   if (error) throw error;
-  return data;
+  return { ...data, avatar_url: null };
 }
