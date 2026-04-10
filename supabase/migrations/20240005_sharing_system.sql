@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS workspace_shares (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_workspace_shares_owner ON workspace_shares(owner_id);
-CREATE INDEX idx_workspace_shares_shared_with ON workspace_shares(shared_with_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_shares_owner ON workspace_shares(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_shares_shared_with ON workspace_shares(shared_with_id);
 
 -- Enable RLS on workspace_shares
 ALTER TABLE workspace_shares ENABLE ROW LEVEL SECURITY;
