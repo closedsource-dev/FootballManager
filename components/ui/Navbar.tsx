@@ -46,10 +46,15 @@ export default function Navbar() {
     try {
       const profile = await getCurrentUserProfile();
       if (profile && !profile.username) {
+        // User has profile but no username - prompt them
         setShowUsernameSetup(true);
         setHasUsername(false);
       } else if (profile && profile.username) {
+        // User has username
         setHasUsername(true);
+      } else {
+        // No profile at all
+        setHasUsername(false);
       }
     } catch (err) {
       // Profiles table might not exist yet
