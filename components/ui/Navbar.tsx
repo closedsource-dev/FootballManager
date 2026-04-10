@@ -6,8 +6,11 @@ import { useCurrency, CURRENCY_SYMBOLS, type Currency } from "@/lib/currencyCont
 import { useTheme } from "@/lib/themeContext";
 import { useAuth } from "@/lib/authContext";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { resetAllUserData } from "@/lib/resetData";
+import { getCurrentUserProfile } from "@/lib/sharing";
+import ShareModal from "./ShareModal";
+import UsernameSetup from "./UsernameSetup";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -28,6 +31,31 @@ export default function Navbar() {
   const [resetting, setResetting] = useState(false);
   const [resetPassword, setResetPassword] = useState("");
   const [resetError, setResetError] = useState("");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showUsernameSetup, setShowUsernameSetup] = useState(false);
+  const [hasUsername, setHasUsername] = useState(true);
+
+  useEffect(() => {
+    checkUsername();
+  }, [user]);
+
+  async function checkUsername() {
+    if (!user) return;
+    try {
+      const profile = await getCurrentUserProfile();
+      if (profile && !profile.username) {
+        setShowUsernameSetup(true);
+        setHasUsername(false);
+      }
+    } catch (err) {
+      console.error("Failed to check username:", err);
+    }
+  }
+
+  function handleUsernameComplete() {
+    setShowUsernameSetup(false);
+    setHasUsername(true);
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -88,6 +116,17 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Share button */}
+        {user && hasUsername && (
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-800 dark:bg-green-700 hover:bg-green-600 transition-colors"
+            title="Share workspace"
+          >
+            👥 Share
+          </button>
+        )}
+
         {/* Dark mode toggle */}
         <button
           onClick={toggle}
@@ -181,6 +220,12 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      {/* Share modal */}
+      {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} />}
+
+      {/* Username setup modal */}
+      {showUsernameSetup && <UsernameSetup onComplete={handleUsernameComplete} />}
     </nav>
   );
 }

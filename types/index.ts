@@ -46,3 +46,37 @@ export interface Payment {
   description?: string;
   paid_at: string;
 }
+
+// Sharing and permissions types
+export type ShareRole = "viewer" | "editor";
+
+export interface WorkspaceShare {
+  id: string;
+  owner_id: string;
+  shared_with_id: string;
+  role: ShareRole;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  email: string;
+}
+
+export interface ShareWithUser {
+  id: string;
+  shared_with_username: string;
+  shared_with_email: string;
+  role: ShareRole;
+  created_at: string;
+}
+
+export interface SharedWithMe {
+  id: string;
+  owner_username: string;
+  owner_email: string;
+  role: ShareRole;
+  created_at: string;
+}
