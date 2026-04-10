@@ -170,7 +170,7 @@ export default function DashboardPage() {
         {username ? `${username}'s Dashboard` : "Dashboard"}
       </h1>
       <p className="text-gray-500 dark:text-gray-400 mb-8">
-        {username ? `Welcome, ${username}` : "Welcome to Football Manager. Use the nav to get started."}
+        {username ? `Your username: ${username}` : "Welcome to Football Manager. Use the nav to get started."}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
