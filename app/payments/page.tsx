@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Player, PaymentWithPlayer, Category, BudgetSummary, Payment } from "@/types";
 import { getPlayers } from "@/lib/players";
 import { getPayments, logPayment, getBudgetSummary, deletePayment } from "@/lib/payments";
@@ -15,6 +16,7 @@ import CategoryDetails from "@/components/payments/CategoryDetails";
 import PlayerTransactionsTable from "@/components/payments/PlayerTransactionsTable";
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<"general" | "players">("general");
   const [payments, setPayments] = useState<PaymentWithPlayer[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -65,17 +67,20 @@ export default function PaymentsPage() {
     }
   }
 
-  async function handleAddToCategory(categoryId: string, amount: number, playerId: string | null, date: string) {
+  async function handleAddToCategory(categoryId: string, amount: number, playerId: string | null, date: string, description?: string) {
     // When a player contributes to a category:
     // - Use "add_money" type so player's balance increases
     // - But the trigger will still add to category amount (we need to update the trigger logic)
     const payDateISO = new Date(date + 'T12:00:00').toISOString();
+    const category = categories.find(c => c.id === categoryId);
+    const categoryName = category?.name || "category";
+    
     await logPayment({
       type: "add_money",
       amount,
       category_id: categoryId,
       player_id: playerId,
-      description: playerId ? "Player contribution to category" : "Allocated to category",
+      description: description || (playerId ? `Player contribution to "${categoryName}"` : `Allocated to "${categoryName}"`),
       paid_at: payDateISO,
     });
     await loadAll();
@@ -88,64 +93,8 @@ export default function PaymentsPage() {
     // Get all payments for this category
     const categoryPayments = payments.filter(p => p.category_id === categoryId);
     
-    // Calculate the net effect on balance and player balances
-    let netBalanceChange = 0;
-    const playerBalanceChanges: Record<string, number> = {};
-
-    for (const payment of categoryPayments) {
-      const amount = Number(payment.amount);
-      
-      // Track balance changes
-      if (payment.type === "add_money") {
-        netBalanceChange -= amount; // Reverse the addition
-      } else if (payment.type === "remove_money") {
-        netBalanceChange += amount; // Reverse the removal
-      }
-
-      // Track player balance changes
-      if (payment.player_id) {
-        if (!playerBalanceChanges[payment.player_id]) {
-          playerBalanceChanges[payment.player_id] = 0;
-        }
-        if (payment.type === "add_money") {
-          playerBalanceChanges[payment.player_id] -= amount;
-        } else if (payment.type === "remove_money") {
-          playerBalanceChanges[payment.player_id] += amount;
-        }
-      }
-    }
-
-    // Create a single payment to adjust the balance
-    if (netBalanceChange !== 0) {
-      await logPayment({
-        type: netBalanceChange > 0 ? "add_money" : "remove_money",
-        amount: Math.abs(netBalanceChange),
-        category_id: null,
-        player_id: null,
-        description: `Adjustment from deleting category: ${category.name}`,
-        paid_at: new Date().toISOString(),
-      });
-    }
-
-    // Update player balances
-    for (const [playerId, change] of Object.entries(playerBalanceChanges)) {
-      if (change !== 0) {
-        const player = players.find(p => p.id === playerId);
-        if (player) {
-          const newBalance = Math.max(0, player.amount_paid + change);
-          await logPayment({
-            type: change > 0 ? "add_money" : "remove_money",
-            amount: Math.abs(change),
-            category_id: null,
-            player_id: playerId,
-            description: `Adjustment from deleting category: ${category.name}`,
-            paid_at: new Date().toISOString(),
-          });
-        }
-      }
-    }
-
-    // Delete all payments associated with this category
+    // Simply delete all payments associated with this category
+    // The database triggers will automatically handle the balance adjustments
     for (const payment of categoryPayments) {
       await deletePayment(payment.id);
     }
@@ -224,8 +173,8 @@ export default function PaymentsPage() {
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Transaction History</h2>
-            <PaymentHistory payments={payments} />
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Recent Transactions</h2>
+            <PaymentHistory payments={payments} limit={10} onViewAll={() => router.push('/payments/history')} />
           </div>
         </div>
       )}

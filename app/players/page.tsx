@@ -53,7 +53,7 @@ export default function PlayersPage() {
     const isDuplicate = players.some(
       (p) => p.name.trim().toLowerCase() === form.name.trim().toLowerCase() && p.id !== modalPlayer?.id
     );
-    if (isDuplicate) throw new Error(`A player named "${form.name}" already exists`);
+    if (isDuplicate) throw new Error("This name already exists");
     if (modalPlayer) {
       const updated = await updatePlayer(modalPlayer.id, form);
       setPlayers((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
@@ -124,6 +124,41 @@ export default function PlayersPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Players</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{players.length} on roster</p>
+          {/* Position breakdown */}
+          <div className="flex items-center gap-2 text-xs mt-1">
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                GK
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {players.filter(p => p.position === "GK").length}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                DEF
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {players.filter(p => p.position === "DEF").length}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                MID
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {players.filter(p => p.position === "MID").length}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                FWD
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                {players.filter(p => p.position === "FWD").length}
+              </span>
+            </div>
+          </div>
         </div>
         <button
           onClick={() => setModalPlayer(undefined)}

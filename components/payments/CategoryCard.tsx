@@ -8,7 +8,7 @@ interface CategoryCardProps {
   category: Category;
   players: Player[];
   payments: PaymentWithPlayer[];
-  onAddMoney: (categoryId: string, amount: number, playerId: string | null, date: string) => Promise<void>;
+  onAddMoney: (categoryId: string, amount: number, playerId: string | null, date: string, description?: string) => Promise<void>;
   onDelete: (categoryId: string) => Promise<void>;
   onViewDetails: (category: Category) => void;
 }
@@ -16,6 +16,7 @@ interface CategoryCardProps {
 export default function CategoryCard({ category, players, payments, onAddMoney, onDelete, onViewDetails }: CategoryCardProps) {
   const { fmt } = useCurrency();
   const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -43,8 +44,9 @@ export default function CategoryCard({ category, players, payments, onAddMoney, 
     setError("");
     setLoading(true);
     try {
-      await onAddMoney(category.id, amt, selectedPlayer || null, selectedDate);
+      await onAddMoney(category.id, amt, selectedPlayer || null, selectedDate, description);
       setAmount("");
+      setDescription("");
       setSelectedPlayer("");
       const today = new Date();
       setSelectedDate(today.toISOString().split('T')[0]);
@@ -102,6 +104,13 @@ export default function CategoryCard({ category, players, payments, onAddMoney, 
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Amount"
+              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+            />
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description (optional)"
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
             />
             <select
