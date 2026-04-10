@@ -169,7 +169,9 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
         {username ? `${username}'s Dashboard` : "Dashboard"}
       </h1>
-      <p className="text-gray-500 dark:text-gray-400 mb-8">Welcome to Football Manager. Use the nav to get started.</p>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">
+        {username ? `Welcome, ${username}` : "Welcome to Football Manager. Use the nav to get started."}
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {/* Total Players */}
