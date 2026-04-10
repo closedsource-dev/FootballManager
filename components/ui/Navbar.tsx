@@ -52,9 +52,17 @@ export default function Navbar() {
         setHasUsername(true);
       }
     } catch (err) {
-      // Profiles table might not exist yet, fail silently
+      // Profiles table might not exist yet
+      // Check if it's a "relation does not exist" error
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
+        // Table doesn't exist, hide sharing features
+        setHasUsername(false);
+      } else {
+        // Other error, assume user might have username
+        setHasUsername(true);
+      }
       console.error("Failed to check username:", err);
-      setHasUsername(false);
     }
   }
 
@@ -122,10 +130,16 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Share button */}
-        {user && hasUsername && (
+        {/* Share button - always show if user is logged in */}
+        {user && (
           <button
-            onClick={() => setShowShareModal(true)}
+            onClick={() => {
+              if (!hasUsername) {
+                setShowUsernameSetup(true);
+              } else {
+                setShowShareModal(true);
+              }
+            }}
             className="text-xs font-semibold px-2.5 py-1 rounded-md bg-green-800 dark:bg-green-700 hover:bg-green-600 transition-colors"
             title="Share workspace"
           >
@@ -133,7 +147,7 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* Shared with me dropdown */}
+        {/* Shared with me dropdown - only show if username is set */}
         {user && hasUsername && (
           <SharedWithMeDropdown onSelectWorkspace={(ownerId) => console.log("Switch to workspace:", ownerId)} />
         )}
@@ -175,8 +189,8 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* Profile menu */}
-        {user && hasUsername && <ProfileMenu onSignOut={handleSignOut} />}
+        {/* Profile menu - always show if user is logged in */}
+        {user && <ProfileMenu onSignOut={handleSignOut} />}
       </div>
 
       {/* Reset confirmation modal */}
