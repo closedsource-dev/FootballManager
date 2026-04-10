@@ -21,6 +21,10 @@ export default function PlayersPage() {
   const [payAmount, setPayAmount] = useState("");
   const [payDesc, setPayDesc] = useState("");
   const [payType, setPayType] = useState<"add" | "subtract">("add");
+  const [payDate, setPayDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   const [payError, setPayError] = useState("");
   const [paying, setPaying] = useState(false);
 
@@ -81,17 +85,21 @@ export default function PlayersPage() {
     setPayError("");
     setPaying(true);
     try {
+      const payDateISO = new Date(payDate + 'T12:00:00').toISOString();
       await logPayment({
         type: payType === "add" ? "add_money" : "remove_money",
         amount: amt,
         player_id: payTarget.id,
         description: payDesc.trim(),
+        paid_at: payDateISO,
       });
       const updated = await getPlayers();
       setPlayers(updated);
       setPayTarget(null);
       setPayAmount("");
       setPayDesc("");
+      const today = new Date();
+      setPayDate(today.toISOString().split('T')[0]);
     } catch (err: unknown) {
       setPayError(err instanceof Error ? err.message : "Failed to save payment");
     } finally {
@@ -122,7 +130,15 @@ export default function PlayersPage() {
           players={players}
           onEdit={(player) => setModalPlayer(player)}
           onDelete={(player) => setDeleteTarget(player)}
-          onPay={(player) => { setPayTarget(player); setPayAmount(""); setPayDesc(""); setPayType("add"); setPayError(""); }}
+          onPay={(player) => { 
+            setPayTarget(player); 
+            setPayAmount(""); 
+            setPayDesc(""); 
+            setPayType("add"); 
+            const today = new Date();
+            setPayDate(today.toISOString().split('T')[0]);
+            setPayError(""); 
+          }}
         />
       )}
 
@@ -173,7 +189,18 @@ export default function PlayersPage() {
               onChange={(e) => setPayDesc(e.target.value)}
               placeholder="Description (optional)"
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600 mb-2"
-            />            <div className="flex gap-3 mt-2">
+            />
+            <div className="mb-2">
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Payment Date</label>
+              <input 
+                type="date" 
+                value={payDate} 
+                onChange={(e) => setPayDate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+            </div>
+            <div className="flex gap-3 mt-2">
               <button
                 onClick={() => setPayTarget(null)}
                 className="flex-1 border dark:border-gray-600 rounded-lg px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

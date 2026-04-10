@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPlayers, recordGameResult } from "@/lib/players";
 import { logGame, getGameLogs, type GameLog } from "@/lib/games";
+import GameStats from "./GameStats";
 import type { Player } from "@/types";
 
 const positionColors: Record<string, string> = {
@@ -157,7 +158,7 @@ export default function GamesPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"create" | "history">("create");
+  const [tab, setTab] = useState<"create" | "history" | "stats">("create");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [tolerance, setTolerance] = useState(5);
@@ -255,7 +256,7 @@ export default function GamesPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-6 w-fit">
-        {(["create", "history"] as const).map((t) => (
+        {(["create", "history", "stats"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -265,7 +266,7 @@ export default function GamesPage() {
                 : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             }`}
           >
-            {t === "create" ? "Create Game" : "Game History"}
+            {t === "create" ? "Create Game" : t === "history" ? "Game History" : "Game Stats"}
           </button>
         ))}
       </div>
@@ -406,6 +407,10 @@ export default function GamesPage() {
 
       {!loading && tab === "history" && (
         <GameHistory playerMap={playerMap} />
+      )}
+
+      {!loading && tab === "stats" && (
+        <GameStats players={allPlayers} />
       )}
     </div>
   );

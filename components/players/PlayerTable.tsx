@@ -79,18 +79,12 @@ export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props)
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Position</th>
               <th className="px-4 py-3 text-left">Skill</th>
-              <th className="px-4 py-3 text-left">GP</th>
-              <th className="px-4 py-3 text-left">GW</th>
-              <th className="px-4 py-3 text-left">Win %</th>
               <th className="px-4 py-3 text-left">Balance</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {sorted.map((player) => {
-              const winRate = player.games_played > 0
-                ? Math.round((player.games_won / player.games_played) * 100)
-                : 0;
               return (
                 <tr key={player.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">{player.name}</td>
@@ -110,9 +104,6 @@ export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props)
                       <span className="text-gray-600 dark:text-gray-300">{player.skill_rating}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{player.games_played}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{player.games_won}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{winRate}%</td>
                   <td className="px-4 py-3 font-medium text-green-700 dark:text-green-400">{fmt(player.amount_paid)}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button
