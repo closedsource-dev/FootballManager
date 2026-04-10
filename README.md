@@ -1,6 +1,6 @@
 # Football Manager
 
-A full-stack web app for managing a recreational football team. Built with Next.js, TypeScript, and Supabase.
+A full-stack web app for managing a recreational football team with category-based fund tracking. Built with Next.js, TypeScript, and Supabase.
 
 **Live demo:** [your-vercel-url.vercel.app](https://your-vercel-url.vercel.app)
 
