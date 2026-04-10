@@ -16,11 +16,12 @@ async function getUserId(): Promise<string> {
   return user.id;
 }
 
-export async function logGame(game: Omit<GameLog, "id" | "played_at">): Promise<GameLog> {
+export async function logGame(game: Omit<GameLog, "id"> & { played_at?: string }): Promise<GameLog> {
   const user_id = await getUserId();
+  const played_at = game.played_at || new Date().toISOString();
   const { data, error } = await supabase
     .from("game_logs")
-    .insert({ ...game, user_id })
+    .insert({ ...game, played_at, user_id })
     .select()
     .single();
   if (error) throw new Error(error.message);

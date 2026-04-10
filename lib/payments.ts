@@ -7,11 +7,12 @@ async function getUserId(): Promise<string> {
   return user.id;
 }
 
-export async function logPayment(payment: Omit<Payment, "id" | "paid_at">): Promise<Payment> {
+export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: string }): Promise<Payment> {
   const user_id = await getUserId();
+  const paid_at = payment.paid_at || new Date().toISOString();
   const { data, error } = await supabase
     .from("payments")
-    .insert({ ...payment, description: payment.description ?? "", user_id })
+    .insert({ ...payment, paid_at, description: payment.description ?? "", user_id })
     .select()
     .single();
   if (error) throw new Error(error.message);
