@@ -18,6 +18,11 @@ export default function DashboardPage() {
   const [teamGames, setTeamGames] = useState(0);
   const [teamGamesYTD, setTeamGamesYTD] = useState(0);
   const [gamesTimeframe, setGamesTimeframe] = useState<"ytd" | "all">("all");
+  const [leaderboardTimeframe, setLeaderboardTimeframe] = useState<"ytd" | "all">("ytd");
+  const [topPlayersYTD, setTopPlayersYTD] = useState<(Player & { ytdGames: number })[]>([]);
+  const [topPlayersAll, setTopPlayersAll] = useState<(Player & { allGames: number })[]>([]);
+  const [runnerUpsYTD, setRunnerUpsYTD] = useState<(Player & { ytdGames: number })[]>([]);
+  const [runnerUpsAll, setRunnerUpsAll] = useState<(Player & { allGames: number })[]>([]);
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
@@ -54,6 +59,40 @@ export default function DashboardPage() {
         return gameYear === currentYear;
       });
       setTeamGamesYTD(ytdGames.length);
+      
+      // Calculate YTD games per player
+      const playerYTDGames = p.map(player => {
+        const gamesPlayed = ytdGames.filter(game => 
+          game.team_a_ids.includes(player.id) || game.team_b_ids.includes(player.id)
+        ).length;
+        return { ...player, ytdGames: gamesPlayed };
+      });
+      
+      // Calculate all-time games per player
+      const playerAllGames = p.map(player => {
+        const gamesPlayed = games.filter(game => 
+          game.team_a_ids.includes(player.id) || game.team_b_ids.includes(player.id)
+        ).length;
+        return { ...player, allGames: gamesPlayed };
+      });
+      
+      // Get top 5 players by YTD games
+      const top5YTD = playerYTDGames
+        .filter(p => p.ytdGames > 0)
+        .sort((a, b) => b.ytdGames - a.ytdGames)
+        .slice(0, 5);
+      
+      setTopPlayersYTD(top5YTD.slice(0, 3)); // Top 3 for podium
+      setRunnerUpsYTD(top5YTD.slice(3, 5)); // 4th and 5th place
+      
+      // Get top 5 players by all-time games
+      const top5All = playerAllGames
+        .filter(p => p.allGames > 0)
+        .sort((a, b) => b.allGames - a.allGames)
+        .slice(0, 5);
+      
+      setTopPlayersAll(top5All.slice(0, 3)); // Top 3 for podium
+      setRunnerUpsAll(top5All.slice(3, 5)); // 4th and 5th place
       
       setCategories(c);
     } catch {
@@ -106,7 +145,8 @@ export default function DashboardPage() {
     setShowCategoryModal(true);
   }
 
-  const totalGames = gamesTimeframe === "ytd" ? teamGamesYTD : teamGames;
+  const totalGames = teamGames; // Rank always based on all-time games
+  const displayGames = gamesTimeframe === "ytd" ? teamGamesYTD : teamGames;
   const rank = getRank(totalGames);
   const nextRank = getNextRank(totalGames);
   const progressToNext = nextRank
@@ -169,7 +209,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">
-            {loading ? "—" : gamesTimeframe === "ytd" ? teamGamesYTD : teamGames}
+            {loading ? "—" : displayGames}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             {gamesTimeframe === "ytd" ? "Games this year" : "Total team games logged"}
@@ -187,7 +227,7 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-1">
                 <span className={`text-2xl font-bold ${rank.color}`}>{rank.name}</span>
-                <span className="text-sm text-gray-400 dark:text-gray-500">{totalGames} games played</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">{totalGames} total games</span>
               </div>
               {nextRank ? (
                 <>
@@ -237,6 +277,125 @@ export default function DashboardPage() {
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard - Top 5 */}
+      {!loading && players.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+              Most Games Played {leaderboardTimeframe === "ytd" ? "YTD" : "All Time"} Leaderboard
+            </h2>
+            <div className="flex rounded-lg border dark:border-gray-600 overflow-hidden">
+              <button
+                onClick={() => setLeaderboardTimeframe("ytd")}
+                className={`text-xs px-3 py-1 transition-colors ${
+                  leaderboardTimeframe === "ytd"
+                    ? "bg-green-700 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                YTD
+              </button>
+              <button
+                onClick={() => setLeaderboardTimeframe("all")}
+                className={`text-xs px-3 py-1 transition-colors ${
+                  leaderboardTimeframe === "all"
+                    ? "bg-green-700 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300"
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6">
+            {(leaderboardTimeframe === "ytd" ? topPlayersYTD : topPlayersAll).length > 0 ? (
+              <>
+                {/* Podium - Top 3 */}
+                <div className="flex items-end justify-center gap-4 mb-6">
+                  {/* 2nd Place - Left */}
+                  {(leaderboardTimeframe === "ytd" ? topPlayersYTD[1] : topPlayersAll[1]) && (
+                    <div className="flex flex-col items-center">
+                      <div className="text-center mb-2">
+                        <p className="text-2xl mb-1">🥈</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[1].name : topPlayersAll[1].name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[1].ytdGames : topPlayersAll[1].allGames} games
+                        </p>
+                      </div>
+                      <div className="h-32 bg-gray-300 dark:bg-gray-600 w-24 rounded-t-lg flex items-center justify-center">
+                        <span className="text-3xl font-bold text-white">2</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 1st Place - Center (Tallest) */}
+                  {(leaderboardTimeframe === "ytd" ? topPlayersYTD[0] : topPlayersAll[0]) && (
+                    <div className="flex flex-col items-center">
+                      <div className="text-center mb-2">
+                        <p className="text-3xl mb-1">🥇</p>
+                        <p className="font-bold text-gray-800 dark:text-gray-100">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[0].name : topPlayersAll[0].name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[0].ytdGames : topPlayersAll[0].allGames} games
+                        </p>
+                      </div>
+                      <div className="h-40 bg-yellow-400 dark:bg-yellow-500 w-28 rounded-t-lg flex items-center justify-center">
+                        <span className="text-4xl font-bold text-white">1</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3rd Place - Right */}
+                  {(leaderboardTimeframe === "ytd" ? topPlayersYTD[2] : topPlayersAll[2]) && (
+                    <div className="flex flex-col items-center">
+                      <div className="text-center mb-2">
+                        <p className="text-2xl mb-1">🥉</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[2].name : topPlayersAll[2].name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {leaderboardTimeframe === "ytd" ? topPlayersYTD[2].ytdGames : topPlayersAll[2].allGames} games
+                        </p>
+                      </div>
+                      <div className="h-28 bg-orange-400 dark:bg-orange-500 w-24 rounded-t-lg flex items-center justify-center">
+                        <span className="text-3xl font-bold text-white">3</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Runner-ups - 4th and 5th */}
+                {(leaderboardTimeframe === "ytd" ? runnerUpsYTD : runnerUpsAll).length > 0 && (
+                  <div className="border-t dark:border-gray-700 pt-4">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 text-center">Runner-ups</p>
+                    <div className="flex justify-center gap-6">
+                      {(leaderboardTimeframe === "ytd" ? runnerUpsYTD : runnerUpsAll).map((player, index) => (
+                        <div key={player.id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-4 py-2">
+                          <span className="text-2xl font-bold text-gray-400 dark:text-gray-500">{index + 4}</span>
+                          <div>
+                            <p className="font-medium text-gray-800 dark:text-gray-100 text-sm">{player.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {leaderboardTimeframe === "ytd" ? (player as any).ytdGames : (player as any).allGames} games
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-8">
+                No games played {leaderboardTimeframe === "ytd" ? "this year" : ""} yet.
+              </p>
+            )}
           </div>
         </div>
       )}
