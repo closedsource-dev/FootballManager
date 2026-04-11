@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCurrentWorkspaceOwnerId } from "./workspaceHelper";
 import type { Payment, PaymentWithPlayer, BudgetSummary } from "../types";
 
 async function getUserId(): Promise<string> {
@@ -8,7 +9,7 @@ async function getUserId(): Promise<string> {
 }
 
 export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: string }): Promise<Payment> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const paid_at = payment.paid_at || new Date().toISOString();
   const { data, error } = await supabase
     .from("payments")
@@ -42,8 +43,8 @@ export async function logPayment(payment: Omit<Payment, "id"> & { paid_at?: stri
 }
 
 export async function getPayments(): Promise<PaymentWithPlayer[]> {
-  const user_id = await getUserId();
-  const { data, error } = await supabase
+  const user_id = await getCurrentWorkspaceOwnerId();
+  const { data, error} = await supabase
     .from("payments")
     .select("*, players(name), categories(name)")
     .eq("user_id", user_id)
@@ -68,12 +69,15 @@ export async function deletePayment(id: string): Promise<void> {
 }
 
 export async function getBudgetSummary(): Promise<BudgetSummary> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("payments")
     .select("type, amount")
     .eq("user_id", user_id);
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("getBudgetSummary error:", error);
+    throw new Error(error.message);
+  }
   let total_collected = 0;
   let total_expenses = 0;
   for (const row of data ?? []) {

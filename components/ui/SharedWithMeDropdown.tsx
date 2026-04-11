@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { getSharedWithMe } from "@/lib/sharing";
+import { useWorkspace } from "@/lib/workspaceContext";
 import type { SharedWithMe } from "@/types";
 
-interface SharedWithMeDropdownProps {
-  onSelectWorkspace: (ownerId: string) => void;
-}
-
-export default function SharedWithMeDropdown({ onSelectWorkspace }: SharedWithMeDropdownProps) {
+export default function SharedWithMeDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [shares, setShares] = useState<SharedWithMe[]>([]);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { visitWorkspace } = useWorkspace();
 
   useEffect(() => {
     if (isOpen) {
@@ -43,9 +41,11 @@ export default function SharedWithMeDropdown({ onSelectWorkspace }: SharedWithMe
     }
   }
 
-  function handleSelect(ownerId: string) {
-    onSelectWorkspace(ownerId);
+  function handleVisit(share: SharedWithMe) {
+    visitWorkspace(share.owner_id, share.role);
     setIsOpen(false);
+    // Reload the page to fetch new workspace data
+    window.location.reload();
   }
 
   return (
@@ -75,10 +75,9 @@ export default function SharedWithMeDropdown({ onSelectWorkspace }: SharedWithMe
           ) : (
             <div className="max-h-64 overflow-y-auto">
               {shares.map((share) => (
-                <button
+                <div
                   key={share.id}
-                  onClick={() => handleSelect(share.owner_id)}
-                  className="w-full px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left flex items-center gap-2"
+                  className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
                 >
                   {share.owner_avatar_url ? (
                     <img
@@ -99,7 +98,13 @@ export default function SharedWithMeDropdown({ onSelectWorkspace }: SharedWithMe
                       {share.role}
                     </p>
                   </div>
-                </button>
+                  <button
+                    onClick={() => handleVisit(share)}
+                    className="text-xs px-3 py-1 rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors"
+                  >
+                    Visit
+                  </button>
+                </div>
               ))}
             </div>
           )}

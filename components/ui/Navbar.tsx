@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCurrency, CURRENCY_SYMBOLS, type Currency } from "@/lib/currencyContext";
 import { useTheme } from "@/lib/themeContext";
 import { useAuth } from "@/lib/authContext";
+import { useWorkspace } from "@/lib/workspaceContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { resetAllUserData } from "@/lib/resetData";
@@ -28,6 +29,7 @@ export default function Navbar() {
   const { currency, setCurrency } = useCurrency();
   const { dark, toggle } = useTheme();
   const { user, signOut } = useAuth();
+  const { isVisiting, leaveWorkspace, currentWorkspaceRole } = useWorkspace();
   const router = useRouter();
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -46,32 +48,24 @@ export default function Navbar() {
   async function checkUsername() {
     if (!user) return;
     
-    console.log("Checking username for user:", user.id);
-    
     try {
       const profile = await getCurrentUserProfile();
-      console.log("Profile loaded:", profile);
       
       if (profile && !profile.username) {
         // User has profile but no username - prompt them
-        console.log("No username found, showing setup modal");
         setShowUsernameSetup(true);
         setHasUsername(false);
       } else if (profile && profile.username) {
         // User has username
-        console.log("Username found:", profile.username);
         setHasUsername(true);
       } else {
         // No profile at all
-        console.log("No profile found");
         setHasUsername(false);
       }
     } catch (err) {
       // Profiles table might not exist yet
       // Check if it's a "relation does not exist" error
       const errorMessage = err instanceof Error ? err.message : String(err);
-      const errorDetails = err instanceof Error ? err : JSON.stringify(err);
-      console.error("Error checking username:", errorDetails);
       
       if (errorMessage.includes('relation') || errorMessage.includes('does not exist')) {
         // Table doesn't exist, hide sharing features
@@ -86,6 +80,11 @@ export default function Navbar() {
   function handleUsernameComplete() {
     setShowUsernameSetup(false);
     setHasUsername(true);
+  }
+
+  function handleLeaveWorkspace() {
+    leaveWorkspace();
+    window.location.reload();
   }
 
   async function handleSignOut() {
@@ -147,8 +146,28 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Share button - always show if user is logged in */}
-        {user && (
+        {/* Visiting workspace indicator */}
+        {isVisiting && (
+          <div className="flex items-center gap-2 bg-blue-800 dark:bg-blue-700 px-3 py-1 rounded-md">
+            <span className="text-xs font-semibold">
+              👁️ Viewing as {currentWorkspaceRole}
+            </span>
+          </div>
+        )}
+
+        {/* Leave button when visiting */}
+        {isVisiting && (
+          <button
+            onClick={handleLeaveWorkspace}
+            className="text-xs font-semibold px-2.5 py-1 rounded-md bg-red-800 dark:bg-red-700 hover:bg-red-600 transition-colors"
+            title="Return to your workspace"
+          >
+            ← Leave
+          </button>
+        )}
+
+        {/* Share button - always show if user is logged in and not visiting */}
+        {user && !isVisiting && (
           <button
             onClick={() => {
               if (!hasUsername) {
@@ -164,9 +183,9 @@ export default function Navbar() {
           </button>
         )}
 
-        {/* Shared with me dropdown - only show if username is set */}
-        {user && hasUsername && (
-          <SharedWithMeDropdown onSelectWorkspace={(ownerId) => console.log("Switch to workspace:", ownerId)} />
+        {/* Shared with me dropdown - only show if username is set and not visiting */}
+        {user && hasUsername && !isVisiting && (
+          <SharedWithMeDropdown />
         )}
 
         {/* Dark mode toggle */}
@@ -195,8 +214,8 @@ export default function Navbar() {
           ))}
         </div>
 
-        {/* Reset data */}
-        {user && (
+        {/* Reset data - only show when not visiting */}
+        {user && !isVisiting && (
           <button
             onClick={() => setShowResetConfirm(true)}
             className="text-xs font-semibold px-2.5 py-1 rounded-md bg-red-800 dark:bg-red-700 hover:bg-red-600 text-red-200 hover:text-white transition-colors"

@@ -11,9 +11,10 @@ interface CategoryCardProps {
   onAddMoney: (categoryId: string, amount: number, playerId: string | null, date: string, description?: string) => Promise<void>;
   onDelete: (categoryId: string) => Promise<void>;
   onViewDetails: (category: Category) => void;
+  isViewer?: boolean;
 }
 
-export default function CategoryCard({ category, players, payments, onAddMoney, onDelete, onViewDetails }: CategoryCardProps) {
+export default function CategoryCard({ category, players, payments, onAddMoney, onDelete, onViewDetails, isViewer = false }: CategoryCardProps) {
   const { fmt } = useCurrency();
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -87,8 +88,9 @@ export default function CategoryCard({ category, players, payments, onAddMoney, 
         </div>
         <button
           onClick={() => setShowDelete(true)}
-          className="text-gray-400 hover:text-red-500 transition-colors"
-          title="Delete category"
+          disabled={isViewer}
+          className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isViewer ? "Viewers cannot delete categories" : "Delete category"}
         >
           ✕
         </button>
@@ -135,8 +137,9 @@ export default function CategoryCard({ category, players, payments, onAddMoney, 
           </div>
           <button
             onClick={handleAdd}
-            disabled={loading}
-            className="w-full bg-green-700 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50"
+            disabled={loading || isViewer}
+            className="w-full bg-green-700 text-white rounded-lg px-3 py-2 text-sm hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isViewer ? "Viewers cannot add money" : "Add money to category"}
           >
             + Add Money
           </button>

@@ -8,6 +8,7 @@ interface Props {
   onEdit: (player: Player) => void;
   onDelete: (player: Player) => void;
   onPay: (player: Player) => void;
+  isViewer?: boolean;
 }
 
 const positionColors: Record<string, string> = {
@@ -42,7 +43,7 @@ function sortPlayers(players: Player[], key: SortKey): Player[] {
   });
 }
 
-export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props) {
+export default function PlayerTable({ players, onEdit, onDelete, onPay, isViewer = false }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("name");
 
   if (players.length === 0) {
@@ -104,19 +105,25 @@ export default function PlayerTable({ players, onEdit, onDelete, onPay }: Props)
                   <td className="px-4 py-3 text-right space-x-2">
                     <button
                       onClick={() => onPay(player)}
-                      className="text-xs px-3 py-1 rounded-lg border border-green-300 dark:border-green-600 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
+                      disabled={isViewer}
+                      className="text-xs px-3 py-1 rounded-lg border border-green-300 dark:border-green-600 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isViewer ? "Viewers cannot manage payments" : "Manage payment"}
                     >
                       Pay
                     </button>
                     <button
                       onClick={() => onEdit(player)}
-                      className="text-xs px-3 py-1 rounded-lg border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                      disabled={isViewer}
+                      className="text-xs px-3 py-1 rounded-lg border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isViewer ? "Viewers cannot edit players" : "Edit player"}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => onDelete(player)}
-                      className="text-xs px-3 py-1 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                      disabled={isViewer}
+                      className="text-xs px-3 py-1 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isViewer ? "Viewers cannot delete players" : "Delete player"}
                     >
                       Delete
                     </button>

@@ -9,6 +9,7 @@ import { getCategories } from "@/lib/categories";
 import { getCurrentUserProfile } from "@/lib/sharing";
 import { useCurrency } from "@/lib/currencyContext";
 import { getRank, getNextRank, RANKS } from "@/lib/ranks";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 import type { Player, BudgetSummary, Category } from "@/types";
 
 export default function DashboardPage() {
@@ -106,8 +107,9 @@ export default function DashboardPage() {
       setRunnerUpsAll(top5All.slice(3, 5)); // 4th and 5th place
       
       setCategories(c);
-    } catch {
-      // fail silently on dashboard
+    } catch (err) {
+      // fail silently on dashboard but log the error
+      console.error("Dashboard load error:", err);
     } finally {
       setLoading(false);
     }
@@ -164,10 +166,14 @@ export default function DashboardPage() {
     ? ((totalGames - rank.minGames) / (nextRank.minGames - rank.minGames)) * 100
     : 100;
 
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-        {username ? `${username}'s Dashboard` : "Dashboard"}
+        Dashboard
       </h1>
       <p className="text-gray-500 dark:text-gray-400 mb-8">
         {username ? `Your username: ${username}` : "Welcome to Football Manager. Use the nav to get started."}
@@ -177,7 +183,7 @@ export default function DashboardPage() {
         {/* Total Players */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Players</p>
-          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{loading ? "—" : players.length}</p>
+          <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">{players.length}</p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             {players.length === 22 ? "Ready to generate teams" : `${Math.max(0, 22 - players.length)} more for full squad`}
           </p>
@@ -187,7 +193,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 p-5 shadow-sm">
           <p className="text-sm text-gray-500 dark:text-gray-400">Fund Balance</p>
           <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">
-            {loading || !summary ? "—" : fmt(summary.balance)}
+            {summary ? fmt(summary.balance) : "—"}
           </p>
           {summary && (
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -224,7 +230,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-3xl font-bold text-green-700 dark:text-green-400 mt-1">
-            {loading ? "—" : displayGames}
+            {displayGames}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             {gamesTimeframe === "ytd" ? "Games this year" : "Total team games logged"}
@@ -233,8 +239,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Rank card */}
-      {!loading && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-6">
             <div className="shrink-0">
               <Image src={rank.image} alt={rank.name} width={120} height={132} className="object-contain drop-shadow-md" />
@@ -270,10 +275,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      )}
 
       {/* Categories */}
-      {!loading && categories.length > 0 && (
+      {categories.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">Fund Categories</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -297,7 +301,7 @@ export default function DashboardPage() {
       )}
 
       {/* Leaderboard - Top 5 */}
-      {!loading && players.length > 0 && (
+      {players.length > 0 && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">

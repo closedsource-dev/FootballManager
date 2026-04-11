@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import PlayerTable from "@/components/players/PlayerTable";
 import PlayerForm from "@/components/players/PlayerForm";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 import { getPlayers, addPlayer, updatePlayer, deletePlayer } from "@/lib/players";
 import { logPayment } from "@/lib/payments";
 import { getCategories } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
+import { useWorkspace } from "@/lib/workspaceContext";
 import type { Player, PlayerFormData, Category } from "@/types";
 
 export default function PlayersPage() {
@@ -17,6 +19,8 @@ export default function PlayersPage() {
   const [modalPlayer, setModalPlayer] = useState<Player | undefined | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Player | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { currentWorkspaceRole } = useWorkspace();
+  const isViewer = currentWorkspaceRole === "viewer";
 
   // Payment modal
   const [payTarget, setPayTarget] = useState<Player | null>(null);
@@ -162,30 +166,35 @@ export default function PlayersPage() {
         </div>
         <button
           onClick={() => setModalPlayer(undefined)}
-          className="bg-green-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-800 transition-colors"
+          disabled={isViewer}
+          className="bg-green-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isViewer ? "Viewers cannot add players" : "Add a new player"}
         >
           + Add Player
         </button>
       </div>
 
-      {loading && <p className="text-gray-400 text-sm">Loading players...</p>}
+      {loading && <LoadingScreen />}
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
       {!loading && (
         <PlayerTable
           players={players}
-          onEdit={(player) => setModalPlayer(player)}
-          onDelete={(player) => setDeleteTarget(player)}
-          onPay={(player) => { 
-            setPayTarget(player); 
-            setPayAmount(""); 
-            setPayDesc(""); 
-            setPayType("add");
-            setPayCategory("");
-            const today = new Date();
-            setPayDate(today.toISOString().split('T')[0]);
-            setPayError(""); 
+          onEdit={(player) => !isViewer && setModalPlayer(player)}
+          onDelete={(player) => !isViewer && setDeleteTarget(player)}
+          onPay={(player) => {
+            if (!isViewer) {
+              setPayTarget(player); 
+              setPayAmount(""); 
+              setPayDesc(""); 
+              setPayType("add");
+              setPayCategory("");
+              const today = new Date();
+              setPayDate(today.toISOString().split('T')[0]);
+              setPayError("");
+            }
           }}
+          isViewer={isViewer}
         />
       )}
 

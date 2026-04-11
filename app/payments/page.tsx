@@ -7,6 +7,8 @@ import { getPlayers } from "@/lib/players";
 import { getPayments, logPayment, getBudgetSummary, deletePayment } from "@/lib/payments";
 import { getCategories, createCategory, deleteCategory } from "@/lib/categories";
 import { useCurrency } from "@/lib/currencyContext";
+import { useWorkspace } from "@/lib/workspaceContext";
+import LoadingScreen from "@/components/ui/LoadingScreen";
 import BudgetSummaryCard from "@/components/payments/BudgetSummary";
 import PaymentForm from "@/components/payments/PaymentForm";
 import PaymentHistory from "@/components/payments/PaymentHistory";
@@ -17,6 +19,8 @@ import PlayerTransactionsTable from "@/components/payments/PlayerTransactionsTab
 
 export default function PaymentsPage() {
   const router = useRouter();
+  const { currentWorkspaceRole } = useWorkspace();
+  const isViewer = currentWorkspaceRole === "viewer";
   const [tab, setTab] = useState<"general" | "players">("general");
   const [payments, setPayments] = useState<PaymentWithPlayer[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -113,7 +117,9 @@ export default function PaymentsPage() {
         </div>
         <button
           onClick={() => setShowPaymentForm(true)}
-          className="bg-green-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-800 transition-colors"
+          disabled={isViewer}
+          className="bg-green-700 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={isViewer ? "Viewers cannot update funds" : "Update fund"}
         >
           + Update Fund
         </button>
@@ -136,7 +142,7 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-      {loading && <p className="text-gray-400 text-sm">Loading…</p>}
+      {loading && <LoadingScreen />}
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
       {!loading && tab === "general" && (
@@ -148,7 +154,9 @@ export default function PaymentsPage() {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Categories</h2>
               <button
                 onClick={() => setShowCategoryForm(true)}
-                className="text-sm border dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                disabled={isViewer}
+                className="text-sm border dark:border-gray-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isViewer ? "Viewers cannot add categories" : "Add category"}
               >
                 + Add Category
               </button>
@@ -166,6 +174,7 @@ export default function PaymentsPage() {
                     onAddMoney={handleAddToCategory}
                     onDelete={handleDeleteCategory}
                     onViewDetails={setSelectedCategory}
+                    isViewer={isViewer}
                   />
                 ))}
               </div>

@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCurrentWorkspaceOwnerId } from "./workspaceHelper";
 import type { Category } from "../types";
 
 async function getUserId(): Promise<string> {
@@ -8,18 +9,21 @@ async function getUserId(): Promise<string> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("categories")
     .select("*")
     .eq("user_id", user_id)
     .order("created_at", { ascending: true });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("getCategories error:", error);
+    throw new Error(error.message);
+  }
   return (data ?? []) as Category[];
 }
 
 export async function createCategory(category: Omit<Category, "id" | "created_at">): Promise<Category> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("categories")
     .insert({ ...category, user_id })

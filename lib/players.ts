@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCurrentWorkspaceOwnerId } from "./workspaceHelper";
 import type { Player, PlayerFormData } from "@/types";
 
 async function getUserId(): Promise<string> {
@@ -8,7 +9,7 @@ async function getUserId(): Promise<string> {
 }
 
 export async function getPlayers(): Promise<Player[]> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("players")
     .select("*")
@@ -19,7 +20,7 @@ export async function getPlayers(): Promise<Player[]> {
 }
 
 export async function addPlayer(form: PlayerFormData): Promise<Player> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("players")
     .insert([{ ...form, user_id }])

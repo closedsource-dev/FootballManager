@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { getCurrentWorkspaceOwnerId } from "./workspaceHelper";
 
 export interface GameLog {
   id: string;
@@ -17,7 +18,7 @@ async function getUserId(): Promise<string> {
 }
 
 export async function logGame(game: Omit<GameLog, "id"> & { played_at?: string }): Promise<GameLog> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const played_at = game.played_at || new Date().toISOString();
   const { data, error } = await supabase
     .from("game_logs")
@@ -29,12 +30,15 @@ export async function logGame(game: Omit<GameLog, "id"> & { played_at?: string }
 }
 
 export async function getGameLogs(): Promise<GameLog[]> {
-  const user_id = await getUserId();
+  const user_id = await getCurrentWorkspaceOwnerId();
   const { data, error } = await supabase
     .from("game_logs")
     .select("*")
     .eq("user_id", user_id)
     .order("played_at", { ascending: false });
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("getGameLogs error:", error);
+    throw new Error(error.message);
+  }
   return (data ?? []) as GameLog[];
 }
