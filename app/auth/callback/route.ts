@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = searchParams.get("next") || "/";
+  const type = searchParams.get("type");
 
   if (code) {
     const cookieStore = await cookies();
@@ -25,10 +26,14 @@ export async function GET(request: Request) {
     );
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     
-    // If this is a password recovery session, redirect to reset password page
     if (!error && data.session) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.aud === "authenticated" && searchParams.get("type") === "recovery") {
+      // If this is an email confirmation (signup verification)
+      if (type === "signup" || type === "email") {
+        return NextResponse.redirect(`${origin}/confirm-email`);
+      }
+      
+      // If this is a password recovery session
+      if (type === "recovery") {
         return NextResponse.redirect(`${origin}/reset-password`);
       }
     }

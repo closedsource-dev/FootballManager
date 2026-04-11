@@ -66,7 +66,13 @@ export default function LoginPage() {
         }
 
         // Create account
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
+          },
+        });
         if (signUpError) {
           throw signUpError;
         }
