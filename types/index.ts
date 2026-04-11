@@ -82,3 +82,40 @@ export interface SharedWithMe {
   role: ShareRole;
   created_at: string;
 }
+
+// Player stats types
+export interface PlayerStats {
+  id: string;
+  player_id: string;
+  user_id: string;
+  // Shared
+  games_played: number; // always 1 per entry
+  // GK
+  saves?: number;
+  goals_conceded?: number;
+  clean_sheets?: number;
+  // DEF
+  tackles?: number;
+  interceptions?: number;
+  // MID
+  key_passes?: number;
+  // FWD / shared attacking
+  goals?: number;
+  assists?: number;
+  shots_on_target?: number;
+  recorded_at: string; // ISO date of the game
+}
+
+export interface AggregatedStats {
+  games_played: number;
+  goals: number;
+  assists: number;
+  // position-specific totals
+  saves?: number;
+  goals_conceded?: number;
+  clean_sheets?: number;
+  tackles?: number;
+  interceptions?: number;
+  key_passes?: number;
+  shots_on_target?: number;
+}

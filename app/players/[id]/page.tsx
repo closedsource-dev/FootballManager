@@ -46,7 +46,7 @@ export default function PlayerDetailPage() {
     load();
   }, [load]);
 
-  async function handleStatSubmit(statData: Omit<PlayerStats, "id" | "player_id">) {
+  async function handleStatSubmit(statData: Omit<PlayerStats, "id" | "player_id" | "user_id">) {
     if (!player) return;
     const updated = await upsertStats(player.id, statData);
     setPlayer(updated);
