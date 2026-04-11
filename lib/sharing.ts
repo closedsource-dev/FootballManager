@@ -61,14 +61,13 @@ export async function updateUsername(username: string): Promise<void> {
   if (!user) throw new Error("Not authenticated");
 
   // Check if username is already taken
-  const { data: existing } = await supabase
+  const { data: existingProfiles } = await supabase
     .from("profiles")
     .select("id")
     .eq("username", username)
-    .neq("id", user.id)
-    .single();
+    .neq("id", user.id);
 
-  if (existing) {
+  if (existingProfiles && existingProfiles.length > 0) {
     throw new Error("Username already taken");
   }
 

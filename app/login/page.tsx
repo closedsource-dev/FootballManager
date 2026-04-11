@@ -35,13 +35,12 @@ export default function LoginPage() {
         }
 
         // Check if username is already taken
-        const { data: existingProfile } = await supabase
+        const { data: existingProfiles } = await supabase
           .from("profiles")
           .select("id")
-          .eq("username", username)
-          .single();
+          .eq("username", username);
 
-        if (existingProfile) {
+        if (existingProfiles && existingProfiles.length > 0) {
           throw new Error("Username already taken");
         }
 
