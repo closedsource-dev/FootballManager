@@ -55,7 +55,18 @@ export default function LoginPage() {
           throw new Error("Username already taken");
         }
 
-        // Create account (Supabase Auth handles email uniqueness)
+        // Check if email is already registered using RPC function
+        const { data: emailExists, error: emailCheckError } = await supabase
+          .rpc("check_email_exists", { check_email: email });
+
+        if (emailCheckError) {
+          console.error("Email check error:", emailCheckError);
+          // Continue anyway if check fails
+        } else if (emailExists) {
+          throw new Error("Email already registered");
+        }
+
+        // Create account
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -63,13 +74,22 @@ export default function LoginPage() {
             emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
           },
         });
+        
         if (signUpError) {
           // Check if it's a duplicate email error
           if (signUpError.message.toLowerCase().includes("already") || 
-              signUpError.message.toLowerCase().includes("exists")) {
+              signUpError.message.toLowerCase().includes("exists") ||
+              signUpError.message.toLowerCase().includes("registered")) {
             throw new Error("Email already registered");
           }
           throw signUpError;
+        }
+
+        // Check if signup was successful but user already exists
+        if (!authData.user || !authData.session) {
+          setMessage("If this email is registered, you'll receive a confirmation email. Otherwise, please check your inbox to confirm your new account.");
+          setLoading(false);
+          return;
         }
 
         // Update profile with username (the trigger creates the profile automatically)
