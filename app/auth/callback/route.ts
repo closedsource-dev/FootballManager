@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const next = searchParams.get("next") || "/";
 
   if (code) {
     const cookieStore = await cookies();
@@ -22,8 +23,16 @@ export async function GET(request: Request) {
         },
       }
     );
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    // If this is a password recovery session, redirect to reset password page
+    if (!error && data.session) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.aud === "authenticated" && searchParams.get("type") === "recovery") {
+        return NextResponse.redirect(`${origin}/reset-password`);
+      }
+    }
   }
 
-  return NextResponse.redirect(`${origin}/`);
+  return NextResponse.redirect(`${origin}${next}`);
 }

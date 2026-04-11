@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "reset">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -18,6 +18,17 @@ export default function LoginPage() {
     setMessage(null);
     setLoading(true);
     try {
+      if (mode === "reset") {
+        // Send password reset email
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/login`,
+        });
+        if (resetError) throw resetError;
+        setMessage("Password reset email sent! Check your inbox.");
+        setLoading(false);
+        return;
+      }
+      
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -92,7 +103,7 @@ export default function LoginPage() {
           <span className="text-5xl">⚽</span>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mt-3">Football Manager</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {mode === "login" ? "Sign in to your account" : "Create a new account"}
+            {mode === "login" ? "Sign in to your account" : mode === "signup" ? "Create a new account" : "Reset your password"}
           </p>
         </div>
 
@@ -124,17 +135,19 @@ export default function LoginPage() {
               className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
-            />
-          </div>
+          {mode !== "reset" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-600"
+              />
+            </div>
+          )}
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
           {message && <p className="text-green-600 text-sm">{message}</p>}
@@ -144,18 +157,43 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-green-700 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-green-800 transition-colors disabled:opacity-50"
           >
-            {loading ? "…" : mode === "login" ? "Sign In" : "Create Account"}
+            {loading ? "…" : mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Email"}
           </button>
         </form>
 
+        {mode === "login" && (
+          <div className="text-center mt-4">
+            <button
+              onClick={() => { setMode("reset"); setError(null); setMessage(null); }}
+              className="text-sm text-green-700 dark:text-green-400 hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
+
         <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-          {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button
-            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setMessage(null); }}
-            className="text-green-700 dark:text-green-400 font-medium hover:underline"
-          >
-            {mode === "login" ? "Sign up" : "Sign in"}
-          </button>
+          {mode === "reset" ? (
+            <>
+              Remember your password?{" "}
+              <button
+                onClick={() => { setMode("login"); setError(null); setMessage(null); }}
+                className="text-green-700 dark:text-green-400 font-medium hover:underline"
+              >
+                Sign in
+              </button>
+            </>
+          ) : (
+            <>
+              {mode === "login" ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button
+                onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); setMessage(null); }}
+                className="text-green-700 dark:text-green-400 font-medium hover:underline"
+              >
+                {mode === "login" ? "Sign up" : "Sign in"}
+              </button>
+            </>
+          )}
         </p>
       </div>
     </div>
