@@ -2,7 +2,7 @@
 
 A full-stack web app for managing a recreational football team with category-based fund tracking. Built with Next.js, TypeScript, and Supabase.
 
-**Live demo:** [your-vercel-url.vercel.app](https://your-vercel-url.vercel.app)
+**Live demo:** [[https://football-manager-wheat.vercel.app]]((https://football-manager-wheat.vercel.app))
 
 ## Features
 
