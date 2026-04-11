@@ -77,7 +77,13 @@ export async function updateUsername(username: string): Promise<void> {
     .update({ username })
     .eq("id", user.id);
 
-  if (error) throw error;
+  if (error) {
+    // Handle unique constraint violation (code 23505)
+    if (error.code === "23505" && error.message.includes("username")) {
+      throw new Error("Username already taken");
+    }
+    throw error;
+  }
 }
 
 export async function uploadAvatar(file: File): Promise<string> {

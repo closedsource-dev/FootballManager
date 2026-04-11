@@ -47,7 +47,13 @@ export default function LoginPage() {
 
         // Create account
         const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
-        if (signUpError) throw signUpError;
+        if (signUpError) {
+          // Handle duplicate email error
+          if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
+            throw new Error("Email already registered");
+          }
+          throw signUpError;
+        }
 
         // Update profile with username (the trigger creates the profile automatically)
         if (authData.user) {
@@ -56,7 +62,13 @@ export default function LoginPage() {
             .update({ username })
             .eq("id", authData.user.id);
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            // Handle unique constraint violation
+            if (profileError.code === "23505" && profileError.message.includes("username")) {
+              throw new Error("Username already taken");
+            }
+            throw profileError;
+          }
         }
 
         setMessage("Account created! Confirm your email and sign in.");
