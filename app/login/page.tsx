@@ -87,7 +87,7 @@ export default function LoginPage() {
 
         // Check if signup was successful but user already exists
         if (!authData.user || !authData.session) {
-          setMessage("If this email is registered, you'll receive a confirmation email. Otherwise, please check your inbox to confirm your new account.");
+          setMessage("Account created! Check your email to confirm.");
           setLoading(false);
           return;
         }
