@@ -34,6 +34,16 @@ export default function LoginPage() {
           throw new Error("Username can only contain letters, numbers, hyphens, and underscores");
         }
 
+        // Check if email is already taken
+        const { data: existingEmail } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", email);
+
+        if (existingEmail && existingEmail.length > 0) {
+          throw new Error("Email already registered");
+        }
+
         // Check if username is already taken
         const { data: existingProfiles } = await supabase
           .from("profiles")
@@ -47,10 +57,6 @@ export default function LoginPage() {
         // Create account
         const { data: authData, error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) {
-          // Handle duplicate email error
-          if (signUpError.message.includes("already registered") || signUpError.message.includes("already exists")) {
-            throw new Error("Email already registered");
-          }
           throw signUpError;
         }
 
